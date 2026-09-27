@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-vazirmatn: 'Vazirmatn', system-ui, -apple-system, sans-serif;
+    --background: 250 250 250;
+    --foreground: 17 24 39;
+    --brand: 22 163 74;
+    --brand-foreground: 255 255 255;
+  }
+
+  .dark {
+    --background: 17 24 39;
+    --foreground: 250 250 250;
+    --brand: 22 163 74;
+    --brand-foreground: 255 255 255;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Apply safe area for iOS notches */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@layer components {
+  /* Mobile-first container */
+  .container-mobile {
+    @apply mx-auto w-full max-w-mobile px-4;
+  }
+
+  /* Bottom navigation height helper */
+  .pb-bottom-nav {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep scrolling */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

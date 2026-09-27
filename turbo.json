@@ -1,0 +1,62 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local", "**/.env"],
+  "globalEnv": [
+    "NODE_ENV",
+    "DEPLOYMENT_PROFILE",
+    "DATABASE_URL",
+    "REDIS_URL",
+    "PUSHER_APP_ID",
+    "PUSHER_KEY",
+    "PUSHER_SECRET",
+    "PUSHER_CLUSTER",
+    "ZARINPAL_MERCHANT_ID",
+    "ZARINPAL_SANDBOX",
+    "IPANEL_API_KEY",
+    "IPANEL_SENDER",
+    "VAPID_PUBLIC_KEY",
+    "VAPID_PRIVATE_KEY",
+    "JWT_ACCESS_SECRET",
+    "JWT_REFRESH_SECRET",
+    "NEXT_PUBLIC_API_URL",
+    "NEXT_PUBLIC_PUSHER_KEY",
+    "NEXT_PUBLIC_PUSHER_CLUSTER"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["NODE_ENV", "DEPLOYMENT_PROFILE"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "outputs": []
+    },
+    "typecheck": {
+      "outputs": [],
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "outputs": ["coverage/**"],
+      "dependsOn": []
+    },
+    "test:unit": {
+      "outputs": ["coverage/**"],
+      "dependsOn": []
+    },
+    "test:e2e": {
+      "outputs": [],
+      "dependsOn": ["build"]
+    },
+    "start:worker": {
+      "cache": false,
+      "persistent": false
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# Cache
+.turbo/
+.cache/
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Storage (local file storage for shared hosting profile)
+apps/api/storage/app/
+apps/api/storage/cache/
+apps/api/storage/logs/
+apps/api/storage/uploads/
+!apps/api/storage/.gitkeep
+!apps/api/storage/app/.gitkeep
+!apps/api/storage/cache/.gitkeep
+!apps/api/storage/logs/.gitkeep
+
+# Prisma
+packages/api/prisma/*.db
+packages/api/prisma/*.db-journal
+
+# Misc
+*.pid
+*.seed
+*.pid.lock

@@ -1,0 +1,15 @@
+{
+  "extends": "@caffenet/config/tsconfig/nextjs.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["./src/*", "./*"],
+      "@caffenet/shared": ["../../packages/shared/src"]
+    },
+    "noEmit": true,
+    "incremental": true,
+    "plugins": [{ "name": "next" }]
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", "dist", ".next"]
+}

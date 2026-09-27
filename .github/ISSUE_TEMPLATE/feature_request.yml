@@ -1,0 +1,38 @@
+---
+name: ✨ Feature Request
+about: Suggest a new feature or enhancement
+title: '[FEAT]: '
+labels: ['feature', 'triage']
+assignees: []
+---
+
+## 💡 Feature Summary
+
+One-sentence summary of the feature.
+
+## 🎯 Problem / Use Case
+
+What problem does this feature solve? Who benefits?
+
+## 🚀 Proposed Solution
+
+Describe the solution you'd like.
+
+## 🔄 Alternatives Considered
+
+What other approaches were considered?
+
+## 📊 Impact
+
+- Affected roles: [ ] customer [ ] operator [ ] admin
+- Affected phases (from TASKS.md): 
+
+## 📋 Acceptance Criteria
+
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+## 📸 Mockups / References
+
+If applicable, add mockups or links to similar features.

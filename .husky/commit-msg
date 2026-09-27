@@ -1,0 +1,5 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Conventional commit message lint
+pnpm exec commitlint --edit "$1"

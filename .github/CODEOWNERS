@@ -1,0 +1,24 @@
+# Code owners for Caffenet
+# Reviews are automatically requested for the listed users on changes to matching paths.
+
+# Default — all changes
+* @ehsanerfani98
+
+# Prisma schema
+/apps/api/prisma/ @ehsanerfani98
+
+# Auth & security
+/apps/api/src/modules/auth/ @ehsanerfani98
+/apps/api/src/common/ @ehsanerfani98
+
+# Finance (wallet, payments, invoices, discounts)
+/apps/api/src/modules/wallets/ @ehsanerfani98
+/apps/api/src/modules/payments/ @ehsanerfani98
+/apps/api/src/modules/invoices/ @ehsanerfani98
+/apps/api/src/modules/pricing/ @ehsanerfani98
+
+# Deployment
+docker/ @ehsanerfani98
+.github/ @ehsanerfani98
+scripts/ @ehsanerfani98
+ecosystem.config.cjs @ehsanerfani98

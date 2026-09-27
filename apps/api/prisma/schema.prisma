@@ -1,0 +1,887 @@
+// ============================================================================
+// Caffenet — Prisma Schema
+// ============================================================================
+// Database: MySQL 8 (primary) — PostgreSQL variant optional for VPS
+// Charset: utf8mb4 / utf8mb4_unicode_ci (full Unicode including emoji)
+// Money: all amounts stored as BIGINT in MINOR units (Toman × 100 = Rial)
+//        — NEVER use Float for financial values
+// Idempotency: every financial record has a UNIQUE idempotency_key
+// ============================================================================
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// AUTH & RBAC
+// ============================================================================
+
+model User {
+  id            BigInt    @id @default(autoincrement())
+  uuid          String    @unique @db.VarChar(36) @default(uuid())
+  phone         String    @unique @db.VarChar(15)
+  email         String?   @unique @db.VarChar(255)
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  phoneVerifiedAt DateTime? @map("phone_verified_at")
+  passwordHash  String    @map("password_hash") @db.VarChar(255)
+  fullName      String?   @map("full_name") @db.VarChar(255)
+  avatarUrl     String?   @map("avatar_url") @db.VarChar(500)
+  status        String    @db.VarChar(20) @default("pending_otp") // UserStatus enum
+  preferredLocale String  @db.VarChar(5) @default("fa")
+  preferredContactMethodId BigInt? @map("preferred_contact_method_id")
+  lastLoginAt   DateTime? @map("last_login_at")
+  lastLoginIp   String?   @map("last_login_ip") @db.VarChar(45)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  // Relations
+  roles                    UserRole[]
+  sessions                 Session[]
+  otps                     Otp[]
+  wallet                   Wallet?
+  // Customer relations
+  customerRequests         Request[]           @relation("customer_requests")
+  assignedRequests         Request[]           @relation("operator_requests")
+  // Sender
+  sentMessages             Message[]
+  // Notifications
+  notifications            Notification[]
+  pushSubscriptions        PushSubscription[]
+  notificationPreferences  NotificationPreference?
+  // Chat participants
+  chatParticipants         ChatParticipant[]
+  // Audit & files
+  auditLogs                AuditLog[]
+  uploadedFiles            FileUpload[]
+  // Contact
+  preferredContactMethod   ContactMethod?     @relation("user_preferred_contact_method")
+
+  @@index([phone])
+  @@index([email])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model Role {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar(36) @default(uuid())
+  name        String    @unique @db.VarChar(50) // UserRole enum
+  slug        String    @unique @db.VarChar(50)
+  description String?   @db.Text
+  isSystem    Boolean   @default(false) @map("is_system")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  users       UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar(36) @default(uuid())
+  name        String    @db.VarChar(100)
+  slug        String    @unique @db.VarChar(100) // e.g. 'services.update'
+  group       String    @db.VarChar(50) // e.g. 'services', 'requests', 'wallet'
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  roles       RolePermission[]
+
+  @@index([group])
+  @@index([slug])
+  @@map("permissions")
+}
+
+model UserRole {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  roleId    BigInt   @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           BigInt   @id @default(autoincrement())
+  roleId       BigInt   @map("role_id")
+  permissionId BigInt  @map("permission_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model Session {
+  id              BigInt    @id @default(autoincrement())
+  uuid            String    @unique @db.VarChar(36) @default(uuid())
+  userId          BigInt    @map("user_id")
+  refreshTokenHash String   @map("refresh_token_hash") @db.VarChar(255)
+  userAgent       String?   @map("user_agent") @db.VarChar(500)
+  ip              String?   @db.VarChar(45)
+  lastUsedAt      DateTime  @map("last_used_at") @default(now())
+  expiresAt       DateTime  @map("expires_at")
+  revokedAt       DateTime? @map("revoked_at")
+  status          String    @db.VarChar(20) @default("active") // SessionStatus
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshTokenHash])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Otp {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar(36) @default(uuid())
+  userId      BigInt    @map("user_id")
+  type        String    @db.VarChar(30) // OtpType
+  codeHash    String    @map("code_hash") @db.VarChar(255)
+  attempts    Int       @default(0)
+  expiresAt   DateTime  @map("expires_at")
+  consumedAt  DateTime? @map("consumed_at")
+  status      String    @db.VarChar(20) @default("pending") // OtpStatus
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([expiresAt])
+  @@index([status])
+  @@map("otps")
+}
+
+// ============================================================================
+// CATALOG (Categories, Services, Dynamic Forms)
+// ============================================================================
+
+model Category {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar(36) @default(uuid())
+  name        String    @db.VarChar(255)
+  slug        String    @unique @db.VarChar(255)
+  description String?   @db.Text
+  icon        String?   @db.VarChar(255)
+  imageUrl    String?   @map("image_url") @db.VarChar(500)
+  sortOrder   Int       @default(0) @map("sort_order")
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  services    Service[]
+
+  @@index([active, sortOrder])
+  @@index([slug])
+  @@map("categories")
+}
+
+model Service {
+  id                  BigInt    @id @default(autoincrement())
+  uuid                String    @unique @db.VarChar(36) @default(uuid())
+  categoryId          BigInt    @map("category_id")
+  name                String    @db.VarChar(255)
+  slug                String    @unique @db.VarChar(255)
+  description         String?   @db.Text
+  image               String?   @db.VarChar(500)
+  icon                String?   @db.VarChar(255)
+  // Snapshot of base labor fee (minor units)
+  laborFee            BigInt    @map("labor_fee") @default(0) // BIGINT minor units
+  defaultMaterialCost BigInt    @map("default_material_cost") @default(0)
+  minMaterialCost     BigInt    @map("min_material_cost") @default(0)
+  maxMaterialCost     BigInt?   @map("max_material_cost")
+  estimatedDurationMin Int      @map("estimated_duration_min") @default(60)
+  active              Boolean   @default(true)
+  requiresFile        Boolean   @default(false) @map("requires_file")
+  requiresCustomerInfo Boolean   @default(false) @map("requires_customer_info")
+  currency            String    @db.VarChar(3) @default("IRT")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  deletedAt           DateTime? @map("deleted_at")
+
+  category            Category  @relation(fields: [categoryId], references: [id])
+  fields              ServiceField[]
+  requests            Request[]
+
+  @@index([categoryId, active])
+  @@index([slug])
+  @@index([active])
+  @@map("services")
+}
+
+model ServiceField {
+  id              BigInt   @id @default(autoincrement())
+  uuid            String   @unique @db.VarChar(36) @default(uuid())
+  serviceId       BigInt   @map("service_id")
+  label           String   @db.VarChar(255)
+  name            String   @db.VarChar(100) // form control name
+  type            String   @db.VarChar(20) // ServiceFieldType enum
+  placeholder     String?  @db.VarChar(255)
+  helpText        String?  @map("help_text") @db.Text
+  required        Boolean  @default(false)
+  validationRules Json?   @map("validation_rules") // MySQL JSON column
+  defaultValue    String?  @map("default_value") @db.Text
+  sortOrder       Int      @default(0) @map("sort_order")
+  options         Json?    // MySQL JSON column for select/multi/radio/checkbox options
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  service         Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  values          RequestFieldValue[]
+
+  @@index([serviceId, sortOrder])
+  @@map("service_fields")
+}
+
+// ============================================================================
+// REQUESTS
+// ============================================================================
+
+model Request {
+  id                BigInt    @id @default(autoincrement())
+  uuid              String    @unique @db.VarChar(36) @default(uuid())
+  trackingCode      String    @unique @db.VarChar(20) // e.g. 'CF-2026-001234'
+  customerId        BigInt    @map("customer_id")
+  serviceId         BigInt    @map("service_id")
+  status            String    @db.VarChar(30) @default("pending") // RequestStatus
+  description       String?   @db.Text
+  // Snapshot of service price at creation (minor units)
+  laborFeeSnapshot  BigInt    @map("labor_fee_snapshot") @default(0)
+  currency          String    @db.VarChar(3) @default("IRT")
+  // Final computed costs (minor units) — kept in request_costs table for audit
+  // but duplicated here for fast read
+  finalTotal        BigInt    @map("final_total") @default(0)
+  paymentStatus     String    @map("payment_status") @db.VarChar(20) @default("unpaid") // PaymentStatus
+  assignedOperatorId BigInt?   @map("assigned_operator_id")
+  estimatedDurationMin Int?    @map("estimated_duration_min")
+  // Contact info chosen by customer
+  contactMethodId   BigInt?   @map("contact_method_id")
+  contactValue      String?   @map("contact_value") @db.VarChar(255) // phone/email/handle
+  completedAt       DateTime? @map("completed_at")
+  cancelledAt       DateTime? @map("cancelled_at")
+  cancellationReason String?  @map("cancellation_reason") @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  customer          User      @relation("customer_requests", fields: [customerId], references: [id])
+  operator          User?      @relation("operator_requests", fields: [assignedOperatorId], references: [id])
+  service           Service   @relation(fields: [serviceId], references: [id])
+  contactMethod     ContactMethod? @relation(fields: [contactMethodId], references: [id])
+  // Sub-tables
+  fieldValues       RequestFieldValue[]
+  statusHistories   RequestStatusHistory[]
+  assignments      RequestAssignment[]
+  costs             RequestCost[]
+  attachments       RequestAttachment[]
+  contacts          RequestContact[]
+  chatRoom          ChatRoom?
+  invoice           Invoice?
+  payments          Payment[]
+
+  @@index([customerId, status, createdAt])
+  @@index([assignedOperatorId, status])
+  @@index([trackingCode])
+  @@index([status, createdAt])
+  @@map("requests")
+}
+
+model RequestFieldValue {
+  id          BigInt   @id @default(autoincrement())
+  requestId   BigInt   @map("request_id")
+  fieldId     BigInt   @map("field_id")
+  value       String?  @db.Text // for files: store file_upload_id as string
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  request     Request     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  field       ServiceField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, fieldId])
+  @@index([fieldId])
+  @@map("request_field_values")
+}
+
+model RequestStatusHistory {
+  id            BigInt   @id @default(autoincrement())
+  requestId     BigInt   @map("request_id")
+  previousStatus String?  @db.VarChar(30) @map("previous_status")
+  newStatus     String   @db.VarChar(30) @map("new_status")
+  userId        BigInt   @map("user_id") // who changed it
+  note          String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  request       Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, createdAt])
+  @@map("request_status_histories")
+}
+
+model RequestAssignment {
+  id          BigInt   @id @default(autoincrement())
+  requestId   BigInt   @map("request_id")
+  operatorId  BigInt   @map("operator_id")
+  assignedBy  BigInt   @map("assigned_by") // user id of admin or self
+  active      Boolean  @default(true) // only one active at a time
+  note        String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  unassignedAt DateTime? @map("unassigned_at")
+
+  request     Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, active])
+  @@index([operatorId, active])
+  @@map("request_assignments")
+}
+
+model RequestCost {
+  id              BigInt   @id @default(autoincrement())
+  uuid            String   @unique @db.VarChar(36) @default(uuid())
+  requestId       BigInt   @unique @map("request_id") // one-to-one with request
+  laborFee        BigInt   @map("labor_fee") @default(0)
+  materialCost    BigInt   @map("material_cost") @default(0)
+  additionalCost  BigInt   @map("additional_cost") @default(0)
+  discountAmount  BigInt   @map("discount_amount") @default(0)
+  finalTotal      BigInt   @map("final_total") @default(0)
+  currency        String   @db.VarChar(3) @default("IRT")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  request         Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  history         RequestCostHistory[]
+
+  @@map("request_costs")
+}
+
+model RequestCostHistory {
+  id              BigInt   @id @default(autoincrement())
+  requestCostId   BigInt   @map("request_cost_id")
+  changeType      String   @db.VarChar(30) @map("change_type") // 'labor', 'material', 'additional', 'discount'
+  previousAmount  BigInt   @map("previous_amount")
+  newAmount       BigInt   @map("new_amount")
+  userId          BigInt   @map("user_id")
+  reason          String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  requestCost     RequestCost @relation(fields: [requestCostId], references: [id], onDelete: Cascade)
+
+  @@index([requestCostId, createdAt])
+  @@map("request_cost_histories")
+}
+
+model RequestAttachment {
+  id          BigInt   @id @default(autoincrement())
+  requestId   BigInt   @map("request_id")
+  fileId      BigInt   @map("file_id")
+  uploadedBy  BigInt   @map("uploaded_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  request     Request    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  file        FileUpload @relation(fields: [fileId], references: [id])
+  uploader    User       @relation(fields: [uploadedBy], references: [id])
+
+  @@index([requestId])
+  @@map("request_attachments")
+}
+
+// ============================================================================
+// CONTACT METHODS
+// ============================================================================
+
+model ContactMethod {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar(36) @default(uuid())
+  name        String    @db.VarChar(50) // Phone, WhatsApp, Telegram, SMS, Internal Chat, Email
+  slug        String    @unique @db.VarChar(50) // phone, whatsapp, telegram, etc.
+  description String?   @db.Text
+  icon        String?   @db.VarChar(255)
+  active      Boolean   @default(true)
+  sortOrder   Int       @default(0) @map("sort_order")
+  isSystem    Boolean   @default(false) @map("is_system")
+  metadata    Json?     // extra config, e.g. bot token for Telegram
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  requests    Request[]
+  requestContacts RequestContact[]
+  userPreferences User[] @relation("user_preferred_contact_method")
+
+  @@index([active, sortOrder])
+  @@map("contact_methods")
+}
+
+model RequestContact {
+  id              BigInt   @id @default(autoincrement())
+  requestId       BigInt   @map("request_id")
+  contactMethodId BigInt   @map("contact_method_id")
+  value           String   @db.VarChar(255)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  request         Request       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  contactMethod   ContactMethod @relation(fields: [contactMethodId], references: [id])
+
+  @@index([requestId])
+  @@map("request_contacts")
+}
+
+// ============================================================================
+// CHAT
+// ============================================================================
+
+model ChatRoom {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar(36) @default(uuid())
+  requestId   BigInt    @unique @map("request_id")
+  type        String    @db.VarChar(20) @default("request") // ChatRoomType
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  request     Request           @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  participants ChatParticipant[]
+  messages    Message[]
+
+  @@map("chat_rooms")
+}
+
+model ChatParticipant {
+  id          BigInt    @id @default(autoincrement())
+  roomId      BigInt    @map("room_id")
+  userId      BigInt    @map("user_id")
+  role        String    @db.VarChar(20) // 'customer' or 'operator' or 'admin'
+  lastReadAt  DateTime? @map("last_read_at")
+  joinedAt    DateTime  @default(now()) @map("joined_at")
+
+  room        ChatRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
+  @@map("chat_participants")
+}
+
+model Message {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar(36) @default(uuid())
+  roomId      BigInt    @map("room_id")
+  senderId    BigInt    @map("sender_id")
+  type        String    @db.VarChar(30) @default("text") // MessageType
+  body        String?   @db.Text
+  metadata    Json?
+  // Read tracking
+  readAt      DateTime? @map("read_at")
+  deliveredAt DateTime? @map("delivered_at")
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   BigInt?   @map("deleted_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  room        ChatRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender      User      @relation(fields: [senderId], references: [id])
+  attachments MessageAttachment[]
+
+  @@index([roomId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model MessageAttachment {
+  id          BigInt   @id @default(autoincrement())
+  messageId   BigInt   @map("message_id")
+  fileId      BigInt   @map("file_id")
+  fileName    String   @map("file_name") @db.VarChar(255)
+  fileSize    BigInt   @map("file_size")
+  mimeType    String   @map("mime_type") @db.VarChar(100)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  message     Message    @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  file        FileUpload @relation(fields: [fileId], references: [id])
+
+  @@index([messageId])
+  @@map("message_attachments")
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar(36) @default(uuid())
+  userId      BigInt    @map("user_id")
+  type        String    @db.VarChar(50) // NotificationType
+  title       String    @db.VarChar(255)
+  body        String?   @db.Text
+  data        Json?
+  readAt      DateTime? @map("read_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@index([type])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id          BigInt   @id @default(autoincrement())
+  userId      BigInt   @unique @map("user_id")
+  // Per-type channel preferences stored as JSON: { type: { in_app: bool, push: bool, email: bool, sms: bool } }
+  preferences Json    @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model PushSubscription {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar(36) @default(uuid())
+  userId      BigInt    @map("user_id")
+  endpoint    String    @unique @db.VarChar(500)
+  p256dhKey   String    @map("p256dh_key") @db.VarChar(255)
+  authKey     String    @map("auth_key") @db.VarChar(255)
+  // Device info
+  userAgent   String?   @map("user_agent") @db.VarChar(500)
+  deviceType  String?   @map("device_type") @db.VarChar(50) // mobile, tablet, desktop
+  // Lifecycle
+  lastUsedAt  DateTime  @map("last_used_at") @default(now())
+  expiredAt   DateTime? @map("expired_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiredAt])
+  @@map("push_subscriptions")
+}
+
+// ============================================================================
+// FINANCE — Wallet, Ledger, Payments, Invoices, Discounts
+// ============================================================================
+
+model Wallet {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar(36) @default(uuid())
+  userId      BigInt    @unique @map("user_id")
+  // Balance in minor units — NEVER Float
+  balance     BigInt    @default(0)
+  currency    String    @db.VarChar(3) @default("IRT")
+  status      String    @db.VarChar(20) @default("active") // WalletStatus
+  version     BigInt    @default(0) // optimistic concurrency
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id              BigInt    @id @default(autoincrement())
+  uuid            String    @unique @db.VarChar(36) @default(uuid())
+  walletId        BigInt    @map("wallet_id")
+  userId          BigInt    @map("user_id")
+  type            String    @db.VarChar(30) // WalletTransactionType
+  // positive = credit, negative = debit (minor units)
+  amount          BigInt
+  balanceBefore   BigInt    @map("balance_before")
+  balanceAfter    BigInt    @map("balance_after")
+  referenceType   String?   @db.VarChar(50) @map("reference_type") // 'payment', 'request', 'admin_adjustment'
+  referenceId     BigInt?   @map("reference_id")
+  description     String?   @db.Text
+  status          String    @db.VarChar(20) @default("completed") // WalletTransactionStatus
+  // Idempotency — UNIQUE, prevents double-spend / double-payment
+  idempotencyKey  String    @unique @map("idempotency_key") @db.VarChar(64)
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  wallet          Wallet    @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, createdAt])
+  @@index([userId, createdAt])
+  @@index([type])
+  @@index([referenceType, referenceId])
+  @@map("wallet_transactions")
+}
+
+model Payment {
+  id              BigInt    @id @default(autoincrement())
+  uuid            String    @unique @db.VarChar(36) @default(uuid())
+  userId          BigInt    @map("user_id")
+  walletId        BigInt?   @map("wallet_id")
+  requestId       BigInt?   @map("request_id")
+  amount          BigInt    // minor units
+  currency        String    @db.VarChar(3) @default("IRT")
+  gateway         String    @db.VarChar(30) // PaymentGatewayName: 'zarinpal', 'zibal'
+  // Gateway-specific data
+  authority       String?   @db.VarChar(255) // ZarinPal authority code
+  referenceNumber String?  @map("reference_number") @db.VarChar(255) // gateway ref ID after verify
+  status          String    @db.VarChar(20) @default("pending") // PaymentRecordStatus
+  metadata        Json?
+  idempotencyKey  String    @unique @map("idempotency_key") @db.VarChar(64)
+  paidAt          DateTime? @map("paid_at")
+  failedAt        DateTime? @map("failed_at")
+  refundedAt      DateTime? @map("refunded_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user            User      @relation(fields: [userId], references: [id])
+  wallet          Wallet?   @relation(fields: [walletId], references: [id])
+  request         Request?  @relation(fields: [requestId], references: [id])
+  callbacks       PaymentCallback[]
+
+  @@index([userId, status])
+  @@index([requestId])
+  @@index([status, createdAt])
+  @@index([gateway, status])
+  @@map("payments")
+}
+
+model PaymentCallback {
+  id          BigInt    @id @default(autoincrement())
+  paymentId   BigInt?   @map("payment_id") // nullable if no payment found
+  // Raw request data (for audit and replay debugging)
+  method      String    @db.VarChar(10)
+  path        String    @db.VarChar(255)
+  query       Json?
+  body        Json?
+  headers     Json?
+  ip          String?   @db.VarChar(45)
+  userAgent   String?   @map("user_agent") @db.VarChar(500)
+  processedAt DateTime? @map("processed_at")
+  result      String?   @db.VarChar(20) // 'success', 'failed', 'ignored'
+  errorMessage String?  @map("error_message") @db.Text
+  receivedAt  DateTime  @default(now()) @map("received_at")
+
+  payment     Payment?  @relation(fields: [paymentId], references: [id])
+
+  @@index([paymentId])
+  @@index([receivedAt])
+  @@map("payment_callbacks")
+}
+
+model Invoice {
+  id              BigInt    @id @default(autoincrement())
+  uuid            String    @unique @db.VarChar(36) @default(uuid())
+  invoiceNumber   String    @unique @map("invoice_number") @db.VarChar(50) // e.g. 'INV-2026-000123'
+  customerId      BigInt    @map("customer_id")
+  requestId       BigInt    @unique @map("request_id")
+  // Cost snapshot (minor units)
+  laborFee        BigInt    @map("labor_fee")
+  materialCost    BigInt    @map("material_cost")
+  additionalCost  BigInt    @map("additional_cost")
+  discountAmount  BigInt    @map("discount_amount") @default(0)
+  finalTotal      BigInt    @map("final_total")
+  currency        String    @db.VarChar(3) @default("IRT")
+  status          String    @db.VarChar(20) @default("issued") // InvoiceStatus
+  // Applied discount
+  discountCodeId  BigInt?   @map("discount_code_id")
+  paidAt          DateTime? @map("paid_at")
+  voidedAt        DateTime? @map("voided_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  customer        User      @relation(fields: [customerId], references: [id])
+  request         Request   @relation(fields: [requestId], references: [id])
+  items           InvoiceItem[]
+
+  @@index([customerId, createdAt])
+  @@index([invoiceNumber])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          BigInt   @id @default(autoincrement())
+  invoiceId   BigInt   @map("invoice_id")
+  // Type: 'labor' | 'material' | 'additional' | 'discount'
+  type        String   @db.VarChar(30)
+  description String   @db.VarChar(255)
+  amount      BigInt   // minor units
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+model DiscountCode {
+  id              BigInt    @id @default(autoincrement())
+  uuid            String    @unique @db.VarChar(36) @default(uuid())
+  code            String    @unique @db.VarChar(50)
+  type            String    @db.VarChar(10) // DiscountType: 'percent' or 'fixed'
+  // For percent: 1-100. For fixed: amount in minor units
+  value           BigInt
+  currency        String    @db.VarChar(3) @default("IRT")
+  // Constraints
+  minOrderAmount  BigInt?   @map("min_order_amount")
+  maxDiscountAmount BigInt? @map("max_discount_amount")
+  usageLimit      Int?      @map("usage_limit") // total usage limit
+  usageLimitPerUser Int?    @map("usage_limit_per_user")
+  usedCount       Int       @default(0) @map("used_count")
+  // Validity
+  startsAt        DateTime  @map("starts_at")
+  expiresAt       DateTime? @map("expires_at")
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  usages          DiscountUsage[]
+  invoices        Invoice[]
+
+  @@index([code])
+  @@index([active, startsAt, expiresAt])
+  @@map("discount_codes")
+}
+
+model DiscountUsage {
+  id              BigInt   @id @default(autoincrement())
+  discountId      BigInt   @map("discount_id")
+  requestId       BigInt   @unique @map("request_id") // one discount per request
+  userId          BigInt   @map("user_id")
+  amountSaved     BigInt   @map("amount_saved") // minor units
+  appliedAt       DateTime @default(now()) @map("applied_at")
+
+  discount        DiscountCode @relation(fields: [discountId], references: [id])
+  // Note: request relation omitted (request is the parent), but unique constraint ensures 1:1
+
+  @@index([discountId, appliedAt])
+  @@index([userId])
+  @@map("discount_usages")
+}
+
+// ============================================================================
+// FILE STORAGE
+// ============================================================================
+
+model FileUpload {
+  id              BigInt    @id @default(autoincrement())
+  uuid            String    @unique @db.VarChar(36) @default(uuid())
+  uploadedById    BigInt    @map("uploaded_by")
+  // Original metadata
+  originalName    String    @map("original_name") @db.VarChar(255)
+  storedName      String    @map("stored_name") @db.VarChar(255) // generated name
+  mimeType        String    @map("mime_type") @db.VarChar(100)
+  size            BigInt
+  // Storage
+  driver          String    @db.VarChar(10) // 'local' or 's3'
+  bucket          String?   @db.VarChar(100)
+  path            String    @db.VarChar(500) // relative path or S3 key
+  visibility      String    @db.VarChar(10) @default("private") // 'public' or 'private'
+  // Integrity
+  sha256Hash      String?   @map("sha256_hash") @db.VarChar(64)
+  virusScanStatus String?  @map("virus_scan_status") @db.VarChar(20) // 'clean', 'infected', 'skipped', 'pending'
+  // Lifecycle
+  accessedAt      DateTime  @map("accessed_at") @default(now())
+  expiresAt       DateTime? @map("expires_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  uploader        User      @relation(fields: [uploadedById], references: [id])
+  requestAttachments RequestAttachment[]
+  messageAttachments MessageAttachment[]
+
+  @@index([uploadedById, createdAt])
+  @@index([sha256Hash])
+  @@map("file_uploads")
+}
+
+// ============================================================================
+// AUDIT & SETTINGS
+// ============================================================================
+
+model AuditLog {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar(36) @default(uuid())
+  userId      BigInt?   @map("user_id") // nullable for system actions
+  action      String    @db.VarChar(50) // AuditAction enum
+  // Resource
+  entity      String    @db.VarChar(50) // 'user', 'request', 'wallet', 'payment' etc.
+  entityId    String?   @db.VarChar(36) // uuid of the entity
+  // Diff
+  oldData     Json?     @map("old_data")
+  newData     Json?     @map("new_data")
+  // Context
+  ip          String?   @db.VarChar(45)
+  userAgent   String?   @map("user_agent") @db.VarChar(500)
+  requestId   String?   @map("request_id") @db.VarChar(36) // HTTP request ID, not business
+  metadata    Json?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        User?     @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([entity, entityId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  id          BigInt    @id @default(autoincrement())
+  key         String    @unique @db.VarChar(100) // e.g. 'system.name', 'pusher.cluster'
+  value       String?   @db.Text
+  // Some settings are objects/arrays
+  valueJson   Json?     @map("value_json")
+  type        String    @db.VarChar(20) @default("string") // 'string', 'number', 'boolean', 'json'
+  isSecret    Boolean   @default(false) @map("is_secret") // don't expose to frontend
+  description String?   @db.Text
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  updatedBy   BigInt?   @map("updated_by")
+
+  @@map("system_settings")
+}
+
+// ============================================================================
+// QUEUE (database-backed driver for shared hosting)
+// ============================================================================
+
+model Job {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @db.VarChar(36) @default(uuid())
+  // Job identification
+  queue       String    @db.VarChar(50) @default("caffenet-jobs")
+  name        String    @db.VarChar(100) // JobName enum
+  // Payload
+  payload     Json?
+  // Status machine
+  status      String    @db.VarChar(20) @default("pending") // JobStatus
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3) @map("max_attempts")
+  reservedAt  DateTime? @map("reserved_at")
+  availableAt DateTime  @default(now()) @map("available_at")
+  failedAt    DateTime? @map("failed_at")
+  completedAt DateTime? @map("completed_at")
+  // Diagnostics
+  errorMessage String?  @map("error_message") @db.Text
+  lastError   String?   @map("last_error") @db.Text
+  // Idempotency (optional)
+  idempotencyKey String? @map("idempotency_key") @db.VarChar(64)
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([queue, status, availableAt])
+  @@index([status, availableAt])
+  @@index([idempotencyKey])
+  @@map("jobs")
+}

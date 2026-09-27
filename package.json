@@ -1,0 +1,53 @@
+{
+  "name": "caffenet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Production-Ready Internet Cafe Service Platform",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "build:shared": "turbo build --filter=@caffenet/shared",
+    "build:api": "turbo build --filter=@caffenet/api",
+    "build:web": "turbo build --filter=@caffenet/web",
+    "build:vps": "cross-env DEPLOYMENT_PROFILE=vps turbo build",
+    "build:shared-hosting": "cross-env DEPLOYMENT_PROFILE=shared turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "test:unit": "turbo test:unit",
+    "test:e2e": "turbo test:e2e",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "turbo clean && rm -rf node_modules",
+    "db:migrate": "pnpm --filter @caffenet/api exec prisma migrate dev",
+    "db:generate": "pnpm --filter @caffenet/api exec prisma generate",
+    "db:seed": "pnpm --filter @caffenet/api exec prisma db seed",
+    "db:studio": "pnpm --filter @caffenet/api exec prisma studio",
+    "worker": "pnpm --filter @caffenet/api start:worker",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.0",
+    "prettier": "^3.3.3",
+    "prettier-plugin-tailwindcss": "^0.6.6",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "cross-env": "^7.0.3",
+    "typescript": "^5.6.2"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}
