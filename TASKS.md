@@ -987,7 +987,7 @@ Stakeholder feedback incorporated:
 | Phase | Title | Status | Completion | Started | Completed |
 |-------|-------|--------|-----------|---------|-----------|
 | 0 | Architecture & Planning | ✅ Done | 100% | 2026-09-28 | 2026-09-28 |
-| 1 | Foundation (Stack/DB/API) | ⏳ Pending | 0% | — | — |
+| 1 | Foundation (Stack/DB/API) | 🚧 In Progress | 0% | 2026-09-28 | — |
 | 2 | Auth + RBAC | ⏳ Pending | 0% | — | — |
 | 3 | Catalog + Dynamic Forms | ⏳ Pending | 0% | — | — |
 | 4 | Requests + Workflow | ⏳ Pending | 0% | — | — |
@@ -1014,15 +1014,16 @@ Stakeholder feedback incorporated:
 |------|--------|--------|
 | 2026-09-28 | Architect | Initial creation — Phase 0 complete, all 16 phases scoped |
 | 2026-09-28 | Architect | **Revision 2**: Switched to Pusher cloud (removed Soketi), MySQL primary (PostgreSQL optional), iPanel SMS, ZarinPal payment, added Dual Deployment Profile for shared hosting compatibility. Removed Redis/MinIO as hard requirements — now optional via env drivers. Added cron-based worker CLI. |
+| 2026-09-28 | Architect | Stakeholder approved architecture + 5 confirmation questions answered. Phase 1 marked as in_progress. |
 
 ---
 
 ## 🤝 Stakeholder Approval
 
-- [ ] **Architecture approved** — proceed to Phase 1
-- [ ] **Architecture needs revision** — feedback below:
-  ```
-  <feedback>
-  ```
+- [x] **Architecture approved** — proceed to Phase 1 ✅ (2026-09-28)
+- [x] Stakeholder confirmed: Pusher cloud + iPanel SMS + ZarinPal payment + Pattern-based OTP
+- [x] Stakeholder confirmed: Dual deployment profile, Shared hosting first priority
+- [x] Stakeholder confirmed: Execution workflow (in_progress → code → completed → report)
+- [ ] ~~**Architecture needs revision**~~ (not needed)
 
 > Once approved, this file will be updated at the end of every phase. Each phase will commit its own progress with a `chore(tasks): complete phase N` commit message.
