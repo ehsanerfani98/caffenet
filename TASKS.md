@@ -5,8 +5,8 @@
 > **Owner:** Senior Software Architect Team  
 > **Repository:** [ehsanerfani98/caffenet](https://github.com/ehsanerfani98/caffenet)  
 > **Created:** 2026-09-28  
-> **Status:** Architecture Approved — Pending Implementation  
-> **Last Updated:** 2026-09-28
+> **Status:** Architecture Revised — Pending Final Approval  
+> **Last Updated:** 2026-09-28 (revision 2 — shared hosting compatibility)
 
 ---
 
@@ -24,43 +24,73 @@ This file is the **single source of truth** for the entire Caffenet project life
 
 ---
 
+## 🔄 Architecture Revision Log (2026-09-28)
+
+Stakeholder feedback incorporated:
+
+| # | Original | Updated | Reason |
+|---|----------|---------|--------|
+| 1 | PostgreSQL primary | **MySQL 8 primary** (PostgreSQL optional for VPS) | Shared hosting compatibility — most Iranian shared hosts only offer MySQL/MariaDB |
+| 2 | Redis required | **Redis optional** — File-based cache + Database queue by default | Shared hosting does not provide Redis |
+| 3 | Self-hosted Soketi | **Pusher.com (cloud)** | Stakeholder preference; also removes need for WebSocket server (compatible with shared hosting) |
+| 4 | MinIO required | **Local filesystem by default** (MinIO/S3 optional) | Shared hosting has local storage; MinIO not installable |
+| 5 | Kavenegar SMS | **iPanel SMS** | Stakeholder preference |
+| 6 | BullMQ queue | **Database-backed queue** by default (BullMQ optional for VPS) | Shared hosting cannot run long-running worker processes |
+| 7 | Docker-only deployment | **Dual deployment profile** (Shared hosting + VPS) | Stakeholder requirement: must work on shared hosting |
+| 8 | PM2 long-running worker | **Cron-based worker** (`node dist/worker.js` every minute) for shared | Shared hosting only allows cron-based scheduling |
+
+**Result:** The system now supports **two deployment profiles**:
+- 🏠 **Shared Hosting Profile** — file cache, DB queue, local storage, cron worker, Pusher cloud
+- 🚀 **VPS Profile** — Redis cache, BullMQ queue, MinIO storage, PM2 worker, Pusher cloud (or Soketi optional)
+
+---
+
 ## 🏗️ Phase 0 — Architecture & Planning
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| 0.1 | Stack proposal & rationale | ✅ | Next.js 16 + NestJS + PostgreSQL + Redis + Soketi |
+| 0.1 | Stack proposal & rationale | ✅ | Next.js 16 + NestJS + MySQL 8 + Pusher cloud + iPanel + ZarinPal |
 | 0.2 | Architecture document (22 sections) | ✅ | Delivered to stakeholder |
+| 0.2.1 | Architecture revision (shared hosting compatibility) | ✅ | Dual deployment profile designed |
 | 0.3 | GitHub repository initialization | ✅ | `ehsanerfani98/caffenet` |
-| 0.4 | TASKS.md master tracker | ✅ | This file |
-| 0.5 | Stakeholder approval to start Phase 1 | ⏳ | **Awaiting confirmation** |
+| 0.4 | TASKS.md master tracker (v2) | ✅ | Updated with revision log |
+| 0.5 | Stakeholder approval to start Phase 1 | ⏳ | **Awaiting final confirmation** |
 
 ---
 
 ## 📦 Phase 1 — Architecture + Stack + Database + API Contract
 
-**Goal:** Lay down foundation — monorepo, core configs, database schema, Prisma migrations, API contract skeleton, base Docker setup.
+**Goal:** Lay down foundation — monorepo, core configs, MySQL 8 database schema, Prisma migrations, API contract skeleton, **dual deployment profile** (shared hosting + VPS).
 
 ### 1.1 Repository & Monorepo Setup
 - [ ] 1.1.1 Initialize pnpm workspace (Turborepo)
-- [ ] 1.1.2 Create `apps/web` (Next.js 16 customer + admin + operator unified SPA)
-- [ ] 1.1.3 Create `apps/api` (NestJS 11 backend)
-- [ ] 1.1.4 Create `apps/ws` (Soketi self-hosted Pusher-compatible server)
+- [ ] 1.1.2 Create `apps/web` (Next.js 16 customer + admin + operator unified SPA + PWA)
+- [ ] 1.1.3 Create `apps/api` (NestJS 11 backend, stateless, shared-hosting compatible)
+- [ ] 1.1.4 ~~Create `apps/ws` (Soketi)~~ **REMOVED** — Use Pusher.com cloud (no WebSocket server needed)
 - [ ] 1.1.5 Create `packages/shared` (TypeScript types, DTOs, enums, constants)
 - [ ] 1.1.6 Create `packages/ui` (shared React component library)
 - [ ] 1.1.7 Create `packages/config` (ESLint, Prettier, TS config)
-- [ ] 1.1.8 Setup `.env.example` for all apps
-- [ ] 1.1.9 Setup `docker-compose.yml` (Postgres, Redis, Soketi, MinIO, Mailhog)
-- [ ] 1.1.10 Setup `Dockerfile` per app + multi-stage build
+- [ ] 1.1.8 Setup `.env.example` (with all `*_DRIVER` switches for shared/VPS profiles)
+- [ ] 1.1.9 Setup `docker-compose.yml` (MySQL 8, optional Redis, optional MinIO, Mailhog) — for VPS dev
+- [ ] 1.1.10 Setup `Dockerfile` per app + multi-stage build (for VPS deployment)
+- [ ] 1.1.11 Setup **shared hosting deployment scripts** (`scripts/deploy-shared.sh`)
+- [ ] 1.1.12 Create `.htaccess` for Apache/LiteSpeed (rewrite rules for SPA + API routing)
+- [ ] 1.1.13 Create `ecosystem.config.cjs` for PM2 (VPS only)
+- [ ] 1.1.14 Create `cron.conf` template for shared hosting crontab
+- [ ] 1.1.15 Configure `DEPLOYMENT_PROFILE` env var (`shared` | `vps`)
 
-### 1.2 Database Foundation
+### 1.2 Database Foundation (MySQL 8 Primary)
 - [ ] 1.2.1 Install Prisma ORM in `apps/api`
-- [ ] 1.2.2 Create base Prisma schema with all 25+ entities (see ERD)
-- [ ] 1.2.3 Define all enums (RoleName, RequestStatus, PaymentStatus, etc.)
-- [ ] 1.2.4 Configure PostgreSQL 16 connection
-- [ ] 1.2.5 Create initial migration
-- [ ] 1.2.6 Configure database indexing strategy
-- [ ] 1.2.7 Configure database connection pooling (pgBouncer)
-- [ ] 1.2.8 Setup read/write replica strategy (planned)
+- [ ] 1.2.2 Create Prisma schema with **MySQL** as default provider (PostgreSQL optional via env switch)
+- [ ] 1.2.3 Define all 25+ entities (see ERD) using MySQL-compatible types (JSON instead of JSONB, INT instead of native enums where needed)
+- [ ] 1.2.4 Define all enums (RoleName, RequestStatus, PaymentStatus, etc.) as Prisma enums (stored as TINYINT/lookup table in MySQL)
+- [ ] 1.2.5 Configure MySQL 8 connection (connection string from env)
+- [ ] 1.2.6 Create initial migration for MySQL
+- [ ] 1.2.7 Configure database indexing strategy
+- [ ] 1.2.8 Configure connection pooling (Prisma built-in + optional external pooler on VPS)
+- [ ] 1.2.9 Verify MySQL 8 supports all required features: SERIALIZABLE isolation, `SELECT FOR UPDATE`, CHECK constraints (8.0.16+), UNIQUE, JSON columns
+- [ ] 1.2.10 Setup database migrations runner compatible with both shared (CLI via SSH) and VPS (Docker entrypoint)
+- [ ] 1.2.11 Setup optional PostgreSQL schema variant (for VPS-only advanced deployments)
 
 ### 1.3 API Contract Skeleton
 - [ ] 1.3.1 Define `/api/v1/` versioning strategy
@@ -83,8 +113,14 @@ This file is the **single source of truth** for the entire Caffenet project life
 - [ ] 1.4.6 Setup branch protection rules on `main`
 - [ ] 1.4.7 Setup PR template
 - [ ] 1.4.8 Setup issue templates (bug, feature, task)
+- [ ] 1.4.9 Setup **Cache abstraction layer** with two drivers: `file` (default for shared) + `redis` (VPS)
+- [ ] 1.4.10 Setup **Queue abstraction layer** with two drivers: `database` (default) + `redis` (VPS)
+- [ ] 1.4.11 Setup **Storage abstraction layer** with two drivers: `local` (default) + `s3` (VPS)
+- [ ] 1.4.12 Setup **Pusher.com integration** in `apps/api` (pusher-js server SDK)
+- [ ] 1.4.13 Create CLI worker entry: `node dist/worker.js --max-jobs=50 --timeout=55` (cron-compatible, self-terminates)
+- [ ] 1.4.14 Create `apps/api/src/config/deployment-profile.ts` (loads driver switches from env)
 
-**Phase 1 Exit Criteria:** Repository runs `pnpm dev` and starts all services in Docker, DB migration applies, OpenAPI docs accessible, health check green.
+**Phase 1 Exit Criteria:** Repository runs `pnpm dev` and starts MySQL (via Docker for VPS dev), DB migration applies, OpenAPI docs accessible, health check green. **Both shared hosting (`pnpm build:shared`) and VPS (`pnpm build:vps`) build commands work.** Cron worker CLI runs successfully with `--max-jobs` and `--timeout` flags.
 
 ---
 
@@ -118,11 +154,13 @@ This file is the **single source of truth** for the entire Caffenet project life
 ### 2.3 OTP & Anti-Abuse
 - [ ] 2.3.1 Create `otps` table (id, user_id, code_hash, type, expires_at, consumed_at, attempts)
 - [ ] 2.3.2 Implement OTP generation (6-digit, hashed storage)
-- [ ] 2.3.3 Implement rate limiting per phone (max 3/hour, max 5/day)
+- [ ] 2.3.3 Implement rate limiting per phone (max 3/hour, max 5/day) — DB-based for shared hosting compat
 - [ ] 2.3.4 Implement attempt limit (max 5 wrong tries)
 - [ ] 2.3.5 Implement OTP expiration (2 minutes)
-- [ ] 2.3.6 Integrate Kavenegar SMS provider (configurable)
+- [ ] 2.3.6 Integrate **iPanel SMS provider** (configurable, with API key from env)
 - [ ] 2.3.7 Integrate email OTP fallback (SMTP)
+- [ ] 2.3.8 Implement `SmsGateway` interface with two adapters: `ipanel` (default) + `kavenegar` (optional)
+- [ ] 2.3.9 Use iPanel pattern-based SMS (verification codes via pattern)
 
 ### 2.4 Session & Device Management
 - [ ] 2.4.1 Create `sessions` table (id, user_id, refresh_token_hash, user_agent, ip, last_used, expires_at)
@@ -558,12 +596,18 @@ This file is the **single source of truth** for the entire Caffenet project life
 
 **Goal:** Real-time chat between customer and operator per request room.
 
-### 10.1 Soketi Server
-- [ ] 10.1.1 Configure Soketi (self-hosted Pusher-compatible)
-- [ ] 10.1.2 Configure Redis adapter for Soketi
-- [ ] 10.1.3 Configure auth endpoint (`POST /api/v1/broadcasting/auth`)
+### 10.1 Pusher.com Integration (Cloud — no WebSocket server needed)
+- [ ] 10.1.1 Configure Pusher.com account (app_id, key, secret, cluster)
+- [ ] 10.1.2 Setup Pusher server SDK in `apps/api` (pusher-nodejs)
+- [ ] 10.1.3 Configure auth endpoint `POST /api/v1/broadcasting/auth` (signed JWT verification)
 - [ ] 10.1.4 Define private channel naming: `private-request.{requestId}`
 - [ ] 10.1.5 Define presence channels: `presence-request.{requestId}`
+- [ ] 10.1.6 Define user-level private channels: `private-user.{userId}`
+- [ ] 10.1.7 Configure Pusher webhook endpoint `POST /api/v1/broadcasting/webhook` (for channel_existence events)
+- [ ] 10.1.8 Setup `apps/web` pusher-js client with auth transport pointing to backend
+- [ ] 10.1.9 Document Pusher plan limits (channels, messages, connections) and capacity planning
+- [ ] 10.1.10 Configure Pusher TLS verification (reject unauthorized)
+- [ ] 10.1.11 **Note:** No Soketi server, no Redis adapter needed for shared hosting — Pusher handles scaling
 
 ### 10.2 Chat Data Model
 - [ ] 10.2.1 Create `chat_rooms` migration (id, uuid, request_id UNIQUE, type, created_at)
@@ -843,17 +887,41 @@ This file is the **single source of truth** for the entire Caffenet project life
 
 ## 🚀 Phase 16 — Production Deployment + Backup + Monitoring
 
-**Goal:** Ship to production with confidence.
+**Goal:** Ship to production with confidence — **must work on both shared hosting AND VPS**.
 
-### 16.1 Infrastructure
-- [ ] 16.1.1 Provision VPS or Kubernetes cluster
-- [ ] 16.1.2 Setup PostgreSQL 16 (managed or self-hosted with replication)
-- [ ] 16.1.3 Setup Redis 7 (managed or self-hosted)
-- [ ] 16.1.4 Setup MinIO / S3-compatible storage
-- [ ] 16.1.5 Setup Soketi server (with Redis adapter)
-- [ ] 16.1.6 Setup Nginx / Caddy reverse proxy with TLS
-- [ ] 16.1.7 Configure CDN (Cloudflare) for static assets
-- [ ] 16.1.8 Configure WAF rules
+### 16.1 Infrastructure (Dual Profile)
+
+#### 16.1.A — Shared Hosting Profile
+- [ ] 16.1.A.1 Select shared hosting provider (Liara shared / ParsPack shared / Hostiran / cPanel host)
+- [ ] 16.1.A.2 Verify Node.js support (Passenger / LiteSpeed LSAPI / cPanel Node.js selector)
+- [ ] 16.1.A.3 Verify MySQL 8 + SSH access + Cron + sufficient memory (≥ 512MB)
+- [ ] 16.1.A.4 Configure `.htaccess` (Apache) or `.lsapi` (LiteSpeed) for SPA + API routing
+- [ ] 16.1.A.5 Build `apps/api` → upload `dist/` + `node_modules` (production deps only) via SSH/FTP
+- [ ] 16.1.A.6 Build `apps/web` → upload `.next/` standalone output to `public_html/`
+- [ ] 16.1.A.7 Configure environment variables via `.env` file (in root, not web-accessible)
+- [ ] 16.1.A.8 Setup cron jobs (every minute):
+  ```
+  * * * * * cd /home/user/caffenet/api && /usr/bin/node dist/worker.js --max-jobs=50 --timeout=55 >> storage/logs/cron.log 2>&1
+  ```
+- [ ] 16.1.A.9 Configure TLS via cPanel AutoSSL or Let's Encrypt
+- [ ] 16.1.A.10 Configure storage directories (writable: `storage/app`, `storage/cache`, `storage/logs`)
+- [ ] 16.1.A.11 Set `DEPLOYMENT_PROFILE=shared` in env
+- [ ] 16.1.A.12 Set `CACHE_DRIVER=file`, `QUEUE_DRIVER=database`, `STORAGE_DRIVER=local`
+- [ ] 16.1.A.13 Disable Pusher webhook endpoint verification if SSL issues (or use self-signed workaround)
+- [ ] 16.1.A.14 Configure Cloudflare CDN in front of shared hosting (optional, recommended)
+- [ ] 16.1.A.15 Test cron job execution + log rotation
+- [ ] 16.1.A.16 Verify memory limits do not crash worker on heavy jobs
+
+#### 16.1.B — VPS Profile
+- [ ] 16.1.B.1 Provision VPS (Hetzner / DigitalOcean / Iranian VPS like ParsPack VPS)
+- [ ] 16.1.B.2 Setup MySQL 8 (managed or self-hosted with replication)
+- [ ] 16.1.B.3 Setup Redis 7 (managed or self-hosted)
+- [ ] 16.1.B.4 Setup MinIO / S3-compatible storage (optional — local disk works too)
+- [ ] 16.1.B.5 Setup Nginx / Caddy reverse proxy with auto-TLS
+- [ ] 16.1.B.6 Setup PM2 process manager (runs API + worker as daemons)
+- [ ] 16.1.B.7 Configure CDN (Cloudflare) for static assets + WAF rules
+- [ ] 16.1.B.8 Set `DEPLOYMENT_PROFILE=vps`, `CACHE_DRIVER=redis`, `QUEUE_DRIVER=redis`, `STORAGE_DRIVER=s3`
+- [ ] 16.1.B.9 Optional: Deploy Soketi as alternative to Pusher.com (for cost saving at high scale)
 
 ### 16.2 CI/CD Pipeline
 - [ ] 16.2.1 GitHub Actions: lint → test → build → push image → deploy
@@ -866,14 +934,16 @@ This file is the **single source of truth** for the entire Caffenet project life
 
 ### 16.3 Environment Management
 - [ ] 16.3.1 `.env.development`, `.env.staging`, `.env.production`
-- [ ] 16.3.2 Secrets in GitHub Actions secrets / Vault
-- [ ] 16.3.3 No secrets in repo (verified by gitleaks)
-- [ ] 16.3.4 Separate databases per environment
+- [ ] 16.3.2 `.env.shared-hosting` template (file cache, db queue, local storage)
+- [ ] 16.3.3 `.env.vps` template (Redis cache, BullMQ, MinIO storage)
+- [ ] 16.3.4 Secrets in GitHub Actions secrets / Vault (VPS) / cPanel Env Vars (shared)
+- [ ] 16.3.5 No secrets in repo (verified by gitleaks)
+- [ ] 16.3.6 Separate databases per environment
 
 ### 16.4 Backup
-- [ ] 16.4.1 Daily PostgreSQL backup (pg_dump + S3 upload)
-- [ ] 16.4.2 WAL archiving for PITR
-- [ ] 16.4.3 Redis RDB + AOF
+- [ ] 16.4.1 Daily **MySQL** backup (`mysqldump --single-transaction` + upload to off-site storage)
+- [ ] 16.4.2 MySQL binlog replication (for PITR on VPS) or daily full + hourly incremental (shared hosting)
+- [ ] 16.4.3 Redis RDB + AOF (VPS only)
 - [ ] 16.4.4 MinIO bucket replication
 - [ ] 16.4.5 Backup retention: 30 days rolling
 - [ ] 16.4.6 Quarterly restore drill
@@ -943,6 +1013,7 @@ This file is the **single source of truth** for the entire Caffenet project life
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-09-28 | Architect | Initial creation — Phase 0 complete, all 16 phases scoped |
+| 2026-09-28 | Architect | **Revision 2**: Switched to Pusher cloud (removed Soketi), MySQL primary (PostgreSQL optional), iPanel SMS, ZarinPal payment, added Dual Deployment Profile for shared hosting compatibility. Removed Redis/MinIO as hard requirements — now optional via env drivers. Added cron-based worker CLI. |
 
 ---
 
