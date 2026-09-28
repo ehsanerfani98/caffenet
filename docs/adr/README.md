@@ -8,8 +8,9 @@ This directory documents significant architectural decisions made during the Caf
 - [ADR-0002: MySQL 8 as primary database](./0002-mysql-primary-database.md) — 2026-09-28
 - [ADR-0003: Pusher.com cloud for real-time (no Soketi)](./0003-pusher-cloud-realtime.md) — 2026-09-28
 - [ADR-0004: Database-backed queue with SKIP LOCKED](./0004-database-queue.md) — 2026-09-28
-- [ADR-0005: iPanel SMS with pattern-based OTP]((./0005-ipanel-sms.md)) — 2026-09-28
+- [ADR-0005: iPanel SMS with pattern-based OTP](./0005-ipanel-sms.md) — 2026-09-28
 - [ADR-0006: All money stored as BIGINT minor units](./0006-money-as-bigint.md) — 2026-09-28
+- [ADR-0007: Shared Hosting Profile does NOT use Docker](./0007-shared-hosting-no-docker.md) — 2026-09-28
 
 ## Format
 

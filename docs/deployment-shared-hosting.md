@@ -14,7 +14,17 @@ Before you start, verify your hosting plan has:
 - [ ] **TLS/SSL** certificate (free AutoSSL or Let's Encrypt via cPanel)
 - [ ] **`.htaccess` support** (Apache) **OR** LiteSpeed LSAPI native Node.js support
 
-If any of these are missing, contact your hosting provider. Most Iranian shared hosts (Liara shared, ParsPack shared, Hostiran, AriaHost) offer these features on mid-tier plans.
+### ❌ NOT required (you don't need these on shared hosting)
+
+- ❌ Docker (shared hosting doesn't support Docker — we don't use it)
+- ❌ Redis (we use file-based cache + database queue instead)
+- ❌ PostgreSQL (we use MySQL)
+- ❌ MinIO / S3 (we use local filesystem storage)
+- ❌ WebSocket server (Pusher.com cloud handles real-time)
+- ❌ Root / sudo access
+- ❌ PM2 (cron handles worker scheduling)
+
+If any of the **required** items are missing, contact your hosting provider. Most Iranian shared hosts (Liara shared, ParsPack shared, Hostiran, AriaHost) offer these features on mid-tier plans.
 
 ## 🛠 Step 1: Local Build
 
@@ -70,7 +80,7 @@ Upload to `~/public_html/`:
 - `apps/web/.next/standalone/` (everything inside)
 - `apps/web/.next/static/` (must be at `apps/web/.next/static/`)
 - `apps/web/public/` (manifest, icons, sw.js)
-- `docker/apache/.htaccess` (rename to `.htaccess`)
+- `deployment/shared-hosting/.htaccess` (rename to `.htaccess`)
 
 ## ⚙️ Step 3: Configure Environment
 

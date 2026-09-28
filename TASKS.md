@@ -1020,6 +1020,7 @@ Stakeholder feedback incorporated:
 | 2026-09-28 | Architect | **Revision 2**: Switched to Pusher cloud (removed Soketi), MySQL primary (PostgreSQL optional), iPanel SMS, ZarinPal payment, added Dual Deployment Profile for shared hosting compatibility. Removed Redis/MinIO as hard requirements — now optional via env drivers. Added cron-based worker CLI. |
 | 2026-09-28 | Architect | Stakeholder approved architecture + 5 confirmation questions answered. Phase 1 marked as in_progress. |
 | 2026-09-28 | Architect | **Phase 1 complete**: Monorepo (Turborepo + pnpm), NestJS 11 + Prisma (MySQL 8, 25+ entities, 47 permissions seed), Next.js 16 PWA with RTL Persian, dual deployment profile (Cache/Queue/Storage abstractions), Pusher integration, Worker CLI for cron, Docker/PM2/.htaccess configs, 6 ADRs, full docs. 119 files committed. CI workflow committed locally but cannot be pushed without `workflow` scope on token — stakeholder action item. |
+| 2026-09-28 | Architect | **Folder restructure**: Moved `docker/` → `deployment/shared-hosting/` + `deployment/vps/` to make it crystal clear that shared hosting deployment does NOT use Docker anywhere. Added ADR-0007 documenting this. Updated README, deploy-shared.sh, deployment guide. Verified: shared hosting path uses NO Dockerfiles, NO docker-compose, NO container runtime — only plain Node.js + MySQL + .htaccess + cron. |
 
 ---
 

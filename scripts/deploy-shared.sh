@@ -1,16 +1,23 @@
 #!/bin/bash
+# Caffenet — Shared Hosting Deployment Script (NO DOCKER USED)
 # ============================================================================
-# Caffenet — Shared Hosting Deployment Script
-# ============================================================================
-# Usage: ./scripts/deploy-shared.sh [user@host] [remote-path]
-# Example: ./scripts/deploy-shared.sh user@server.example.com /home/user/caffenet
+# This script deploys Caffenet to a shared hosting provider (cPanel, DirectAdmin,
+# LiteSpeed). It does NOT use Docker in any way — shared hosting providers do not
+# support Docker.
 #
-# This script:
-# 1. Builds the monorepo locally (with DEPLOYMENT_PROFILE=shared)
-# 2. Uploads artifacts to shared hosting via SSH/rsync
-# 3. Installs production dependencies on remote
-# 4. Runs database migrations
-# 5. Reloads the app (via cPanel Node.js selector or by signaling Passenger)
+# What this script does:
+# 1. Builds the monorepo locally with DEPLOYMENT_PROFILE=shared
+# 2. Uploads artifacts (compiled JS, .htaccess, public assets) via SSH/rsync
+# 3. Installs production Node.js dependencies on the remote (via npm/pnpm)
+# 4. Runs database migrations via Prisma CLI
+# 5. Reloads the app (via cPanel Node.js selector or Passenger auto-restart)
+#
+# What this script does NOT do:
+# - Does NOT use Docker / Docker Compose
+# - Does NOT use Redis (file-based cache + database queue instead)
+# - Does NOT use MinIO (local filesystem storage instead)
+# - Does NOT use Soketi (Pusher.com cloud handles real-time)
+# - Does NOT require root or sudo access
 # ============================================================================
 
 set -euo pipefail
@@ -64,7 +71,7 @@ ssh "$REMOTE_HOST" "cd $REMOTE_PATH/apps/api && /usr/bin/npx prisma migrate depl
 # Ensure storage directories exist
 ssh "$REMOTE_HOST" "mkdir -p $REMOTE_PATH/apps/api/storage/{app/{public,private},cache,logs} && chmod -R 755 $REMOTE_PATH/apps/api/storage"
 
-# Upload web build to public_html (or a subfolder)
+# Copy .htaccess (from the new location: deployment/shared-hosting/.htaccess)
 echo ""
 echo "🌐 Uploading web build to public_html"
 rsync -avz --delete \
@@ -79,9 +86,9 @@ rsync -avz \
   ./apps/web/public/ \
   "$REMOTE_HOST:~/public_html/"
 
-# Copy .htaccess
+# Copy .htaccess (Apache/LiteSpeed config — NO Docker)
 rsync -avz \
-  ./docker/apache/.htaccess \
+  ./deployment/shared-hosting/.htaccess \
   "$REMOTE_HOST:~/public_html/.htaccess"
 
 # Copy cron.conf
