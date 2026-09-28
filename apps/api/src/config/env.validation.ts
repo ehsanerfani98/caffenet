@@ -99,6 +99,8 @@ export const envValidation = Joi.object({
   IPANEL_SENDER: Joi.string().allow(''),
   IPANEL_OTP_PATTERN_CODE: Joi.string().allow(''),
   IPANEL_OTP_PARAM_NAME: Joi.string().default('code'),
+  // SMS driver selector — controls which adapter SmsModule loads
+  SMS_DRIVER: Joi.string().valid('ipanel', 'kavenegar').default('ipanel'),
 
   // VAPID
   VAPID_PUBLIC_KEY: Joi.string().when('NODE_ENV', {

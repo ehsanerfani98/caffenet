@@ -11,6 +11,10 @@ import { Logger as PinoLogger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
+import { patchBigIntSerialization } from './common/utils/bigint-serialization';
+
+// Apply BigInt JSON serialization patch (must run before any HTTP response)
+patchBigIntSerialization();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {

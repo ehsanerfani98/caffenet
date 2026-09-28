@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 import { PrismaModule } from './database/prisma.module';
 import { AppController } from './app.controller';
@@ -15,8 +16,11 @@ import { QueueModule } from './queue/queue.module';
 import { StorageModule } from './storage/storage.module';
 import { EventsModule } from './events/events.module';
 
-// Feature modules (placeholders for now — Phase 2+ will implement them)
+// Feature modules
 import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { SmsModule } from './modules/sms/sms.module';
 import { HealthModule } from './modules/health/health.module';
 
 @Module({
@@ -28,6 +32,15 @@ import { HealthModule } from './modules/health/health.module';
       validationOptions: { allowUnknown: true, abortEarly: false },
       envFilePath: ['.env.local', '.env'],
     }),
+    // Internal event bus (in-memory, single process — works on shared hosting)
+    EventEmitterModule.forRoot({
+      // Use wildcards for hierarchical events (e.g. 'audit.*', 'request.*')
+      wildcard: true,
+      // Delimiter between event segments
+      delimiter: '.',
+      // Don't await listeners by default (fire-and-forget)
+      maxListeners: 20,
+    }),
     // Structured logging
     LoggerModule.forRootAsync({
       useFactory: () => ({
@@ -35,18 +48,24 @@ import { HealthModule } from './modules/health/health.module';
           level: process.env.LOG_LEVEL || 'info',
           transport:
             process.env.LOG_PRETTY === 'true'
-              ? { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:standard' } }
+              ? {
+                  target: 'pino-pretty',
+                  options: { colorize: true, translateTime: 'SYS:standard' },
+                }
               : undefined,
-          // Redact sensitive fields
+          // Redact sensitive fields from logs
           redact: {
             paths: [
               'req.headers.authorization',
               'req.headers.cookie',
               'req.body.password',
               'req.body.passwordHash',
+              'req.body.currentPassword',
+              'req.body.newPassword',
               'req.body.code',
               'req.body.otp',
               'res.body.token',
+              'res.body.accessToken',
               'res.body.refreshToken',
             ],
             censor: '[REDACTED]',
@@ -54,13 +73,13 @@ import { HealthModule } from './modules/health/health.module';
         },
       }),
     }),
-    // Rate limiting
+    // Rate limiting (uses default ThrottlerGuard via APP_GUARD)
     ThrottlerModule.forRoot([
       { name: 'default', ttl: 60_000, limit: 100 },
       { name: 'auth', ttl: 60_000, limit: 5 },
       { name: 'otp', ttl: 60_000, limit: 10 },
     ]),
-    // Cron (VPS profile only)
+    // Cron (used by ScheduleModule for cleanup tasks on VPS — on shared hosting we use cron CLI)
     ScheduleModule.forRoot(),
     // Core infrastructure
     PrismaModule,
@@ -69,10 +88,13 @@ import { HealthModule } from './modules/health/health.module';
     QueueModule,
     StorageModule,
     EventsModule,
+    AuditModule,
     DeploymentProfileService,
-    // Feature modules (placeholders)
+    // Feature modules
     HealthModule,
+    SmsModule,
     AuthModule,
+    UsersModule,
     // Additional modules (Phase 3+) added here
   ],
   controllers: [AppController],
