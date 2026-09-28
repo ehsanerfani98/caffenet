@@ -992,7 +992,7 @@ Stakeholder feedback incorporated:
 |-------|-------|--------|-----------|---------|-----------|
 | 0 | Architecture & Planning | ✅ Done | 100% | 2026-09-28 | 2026-09-28 |
 | 1 | Foundation (Stack/DB/API) | ✅ Done | 100% | 2026-09-28 | 2026-09-28 |
-| 2 | Auth + RBAC | ⏳ Pending | 0% | — | — |
+| 2 | Auth + RBAC | 🚧 In Progress | 0% | 2026-09-28 | — |
 | 3 | Catalog + Dynamic Forms | ⏳ Pending | 0% | — | — |
 | 4 | Requests + Workflow | ⏳ Pending | 0% | — | — |
 | 5 | Pricing + Invoice | ⏳ Pending | 0% | — | — |
@@ -1021,6 +1021,7 @@ Stakeholder feedback incorporated:
 | 2026-09-28 | Architect | Stakeholder approved architecture + 5 confirmation questions answered. Phase 1 marked as in_progress. |
 | 2026-09-28 | Architect | **Phase 1 complete**: Monorepo (Turborepo + pnpm), NestJS 11 + Prisma (MySQL 8, 25+ entities, 47 permissions seed), Next.js 16 PWA with RTL Persian, dual deployment profile (Cache/Queue/Storage abstractions), Pusher integration, Worker CLI for cron, Docker/PM2/.htaccess configs, 6 ADRs, full docs. 119 files committed. CI workflow committed locally but cannot be pushed without `workflow` scope on token — stakeholder action item. |
 | 2026-09-28 | Architect | **Folder restructure**: Moved `docker/` → `deployment/shared-hosting/` + `deployment/vps/` to make it crystal clear that shared hosting deployment does NOT use Docker anywhere. Added ADR-0007 documenting this. Updated README, deploy-shared.sh, deployment guide. Verified: shared hosting path uses NO Dockerfiles, NO docker-compose, NO container runtime — only plain Node.js + MySQL + .htaccess + cron. |
+| 2026-09-28 | Architect | Phase 2 marked as in_progress. Building auth (register, login, OTP, refresh, logout), JWT RS256, iPanel SMS, session management, RBAC guards, audit interceptor. |
 
 ---
 
