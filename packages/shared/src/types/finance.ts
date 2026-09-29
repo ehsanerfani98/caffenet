@@ -161,3 +161,95 @@ export interface InvoiceDto {
   updatedAt: string;
   items?: InvoiceItemDto[];
 }
+
+// ============================================================================
+// Phase 6 — Wallet + Ledger + Online Payments
+// ============================================================================
+
+/** GET /api/v1/wallet (6.1.3). Amounts in Toman (major units). */
+export interface WalletDto {
+  id: string;
+  uuid: string;
+  userId: string;
+  /** Toman (major units) */
+  balance: number;
+  currency: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Ledger entry (6.2) — GET /api/v1/wallet/transactions rows. */
+export interface WalletTransactionDto {
+  id: string;
+  uuid: string;
+  walletId: string;
+  userId: string;
+  /** deposit | withdrawal | service_payment | refund | discount | bonus | manual_adjustment | payment_reversal */
+  type: string;
+  /** Toman (major units) — negative for debits */
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  referenceType?: string | null;
+  referenceId?: string | null;
+  description?: string | null;
+  status: string;
+  createdAt: string;
+}
+
+export interface WalletTransactionsPageDto {
+  items: WalletTransactionDto[];
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+}
+
+/** POST /api/v1/payments response (6.4.6) — includes gateway redirect. */
+export interface PaymentDto {
+  id: string;
+  uuid: string;
+  userId: string;
+  walletId?: string | null;
+  requestId?: string | null;
+  /** Toman (major units) */
+  amount: number;
+  currency: string;
+  gateway: string;
+  status: string;
+  authority?: string | null;
+  referenceNumber?: string | null;
+  paidAt?: string | null;
+  failedAt?: string | null;
+  refundedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Result of POST /api/v1/payments (top-up) or /requests/:id/pay (online). */
+export interface CreatePaymentResult {
+  payment: PaymentDto;
+  /** Redirect the customer to this URL to complete payment */
+  redirectUrl: string;
+}
+
+/** Wallet path result of POST /api/v1/requests/:id/pay (6.5.2). */
+export interface WalletPayResult {
+  method: 'wallet';
+  requestId: string;
+  trackingCode: string;
+  status: 'paid';
+  /** Toman (major units) — amount debited */
+  amount: number;
+  /** Toman (major units) — balance after debit */
+  walletBalance: number;
+  invoiceNumber?: string | null;
+}
+
+/** POST /api/v1/requests/:id/pay — body (6.5.1). */
+export interface PayRequestDtoData {
+  method: 'wallet' | 'online';
+  /** Online only — defaults to configured gateway */
+  gateway?: 'zarinpal' | 'zibal';
+}

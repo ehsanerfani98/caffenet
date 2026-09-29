@@ -6,7 +6,7 @@
 > **Repository:** [ehsanerfani98/caffenet](https://github.com/ehsanerfani98/caffenet)  
 > **Created:** 2026-09-28  
 > **Status:** Architecture Revised — Pending Final Approval  
-> **Last Updated:** 2026-09-29 (Phase 5 complete)
+> **Last Updated:** 2026-09-29 (Phase 6 complete — migration + E2E verified on MySQL 8)
 
 ---
 
@@ -390,54 +390,66 @@ Implementation notes shipped with Phase 5:
 
 ### 6.1 Wallet
 
-- [ ] 6.1.1 Create `wallets` migration (id, uuid, user_id UNIQUE, balance INT, currency, status, timestamps)
-- [ ] 6.1.2 Auto-create wallet on user registration (DB trigger or app event)
-- [ ] 6.1.3 Implement `GET /api/v1/wallet`
-- [ ] 6.1.4 Implement `GET /api/v1/wallet/transactions` (paginated)
-- [ ] 6.1.5 Implement `WalletBalance` React component
+- [x] 6.1.1 Create `wallets` migration (id, uuid, user_id UNIQUE, balance INT, currency, status, timestamps)
+- [x] 6.1.2 Auto-create wallet on user registration (DB trigger or app event)
+- [x] 6.1.3 Implement `GET /api/v1/wallet`
+- [x] 6.1.4 Implement `GET /api/v1/wallet/transactions` (paginated)
+- [x] 6.1.5 Implement `WalletBalance` React component
 
 ### 6.2 Ledger (Wallet Transactions)
 
-- [ ] 6.2.1 Create `wallet_transactions` migration (id, uuid, wallet_id, user_id, type, amount, balance_before, balance_after, reference_type, reference_id, description, status, idempotency_key UNIQUE, timestamps)
-- [ ] 6.2.2 Implement ledger entry service (atomic with wallet update)
-- [ ] 6.2.3 Implement types: Deposit, Withdrawal, ServicePayment, Refund, Discount, Bonus, ManualAdjustment, PaymentReversal
-- [ ] 6.2.4 Implement idempotency key enforcement (UNIQUE constraint)
-- [ ] 6.2.5 Implement `TransactionItem` React component
+- [x] 6.2.1 Create `wallet_transactions` migration (id, uuid, wallet_id, user_id, type, amount, balance_before, balance_after, reference_type, reference_id, description, status, idempotency_key UNIQUE, timestamps)
+- [x] 6.2.2 Implement ledger entry service (atomic with wallet update)
+- [x] 6.2.3 Implement types: Deposit, Withdrawal, ServicePayment, Refund, Discount, Bonus, ManualAdjustment, PaymentReversal
+- [x] 6.2.4 Implement idempotency key enforcement (UNIQUE constraint)
+- [x] 6.2.5 Implement `TransactionItem` React component
 
 ### 6.3 Atomic Wallet Operations
 
-- [ ] 6.3.1 Implement `WalletService.deposit(amount, reference)` — uses DB transaction + SELECT FOR UPDATE on wallet row
-- [ ] 6.3.2 Implement `WalletService.withdraw(amount, reference)` — rejects if balance insufficient
-- [ ] 6.3.3 Implement `WalletService.payForRequest(requestId)` — atomic debit + ledger + request status update
-- [ ] 6.3.4 Implement `WalletService.refund(requestId)` — atomic credit + reverse ledger
-- [ ] 6.3.5 Implement double-spend protection (UNIQUE on idempotency_key)
-- [ ] 6.3.6 Implement concurrency test (10 parallel payments, only 1 succeeds)
-- [ ] 6.3.7 Implement `WalletUpdated` event
+- [x] 6.3.1 Implement `WalletService.deposit(amount, reference)` — uses DB transaction + SELECT FOR UPDATE on wallet row
+- [x] 6.3.2 Implement `WalletService.withdraw(amount, reference)` — rejects if balance insufficient
+- [x] 6.3.3 Implement `WalletService.payForRequest(requestId)` — atomic debit + ledger + request status update
+- [x] 6.3.4 Implement `WalletService.refund(requestId)` — atomic credit + reverse ledger
+- [x] 6.3.5 Implement double-spend protection (UNIQUE on idempotency_key)
+- [x] 6.3.6 Implement concurrency test (10 parallel payments, only 1 succeeds)
+- [x] 6.3.7 Implement `WalletUpdated` event
 
 ### 6.4 Online Payment Gateway
 
-- [ ] 6.4.1 Create `payments` migration (id, uuid, user_id, wallet_id NULL, request_id NULL, amount, gateway, authority, reference_number, status, metadata JSONB, idempotency_key, timestamps, paid_at)
-- [ ] 6.4.2 Create `payment_callbacks` migration (log all gateway callbacks raw)
-- [ ] 6.4.3 Implement ZarinPal gateway adapter (configurable)
-- [ ] 6.4.4 Implement Zibal gateway adapter (alternative)
-- [ ] 6.4.5 Implement `PaymentGateway` interface (create, verify, refund)
-- [ ] 6.4.6 Implement `POST /api/v1/payments` (create payment request → return authority + redirect URL)
-- [ ] 6.4.7 Implement `GET /api/v1/payments/:id`
-- [ ] 6.4.8 Implement `GET /api/v1/payments/callback` (verify with gateway server-side, NEVER trust client)
-- [ ] 6.4.9 Implement idempotent verify (re-callback safe)
-- [ ] 6.4.10 Implement `POST /api/v1/payments/:id/verify` (manual re-verify)
-- [ ] 6.4.11 On success: atomic ledger deposit + wallet balance update + `PaymentCompleted` event
-- [ ] 6.4.12 On failure: log + status update + `PaymentFailed` event
+- [x] 6.4.1 Create `payments` migration (id, uuid, user_id, wallet_id NULL, request_id NULL, amount, gateway, authority, reference_number, status, metadata JSONB, idempotency_key, timestamps, paid_at)
+- [x] 6.4.2 Create `payment_callbacks` migration (log all gateway callbacks raw)
+- [x] 6.4.3 Implement ZarinPal gateway adapter (configurable)
+- [x] 6.4.4 Implement Zibal gateway adapter (alternative)
+- [x] 6.4.5 Implement `PaymentGateway` interface (create, verify, refund)
+- [x] 6.4.6 Implement `POST /api/v1/payments` (create payment request → return authority + redirect URL)
+- [x] 6.4.7 Implement `GET /api/v1/payments/:id`
+- [x] 6.4.8 Implement `GET /api/v1/payments/callback` (verify with gateway server-side, NEVER trust client)
+- [x] 6.4.9 Implement idempotent verify (re-callback safe)
+- [x] 6.4.10 Implement `POST /api/v1/payments/:id/verify` (manual re-verify)
+- [x] 6.4.11 On success: atomic ledger deposit + wallet balance update + `PaymentCompleted` event
+- [x] 6.4.12 On failure: log + status update + `PaymentFailed` event
 
 ### 6.5 Request Payment Flow
 
-- [ ] 6.5.1 Implement `POST /api/v1/requests/:id/pay` (choose method: wallet | online)
-- [ ] 6.5.2 Wallet path: atomic wallet debit + request marked Paid
-- [ ] 6.5.3 Online path: create payment → redirect → callback verify → atomic ledger
-- [ ] 6.5.4 Reject double payment (idempotency + status check)
-- [ ] 6.5.5 Reject if request not in WaitingForPayment
+- [x] 6.5.1 Implement `POST /api/v1/requests/:id/pay` (choose method: wallet | online)
+- [x] 6.5.2 Wallet path: atomic wallet debit + request marked Paid
+- [x] 6.5.3 Online path: create payment → redirect → callback verify → atomic ledger
+- [x] 6.5.4 Reject double payment (idempotency + status check)
+- [x] 6.5.5 Reject if request not in WaitingForPayment
 
-**Phase 6 Exit Criteria:** Wallet atomic, ledger immutable, online payment verified server-side, double-spend impossible (proven by test), callback idempotent.
+**Phase 6 Exit Criteria:** ✅ Wallet atomic, ledger immutable, online payment verified server-side, double-spend impossible (proven by test — 10 parallel wallet payments → exactly 1 success, exactly 1 ledger row), callback idempotent. **Phase 6 marked complete on 2026-09-29.**
+
+Implementation notes shipped with Phase 6:
+
+- Shared: `types/finance.ts` extended with WalletDto / WalletTransactionDto / WalletTransactionsPageDto / PaymentDto / CreatePaymentResult / WalletPayResult / PayRequestDtoData
+- API `modules/wallet`: WalletService (getOrCreateWallet auto-provision 6.1.2, deposit 6.3.1, withdraw 6.3.2, payForRequest 6.3.3, refundRequest 6.3.4, manualAdjustment, settlePayment 6.4.11), WalletController (GET /wallet 6.1.3, GET /wallet/transactions 6.1.4, admin view + adjust), WalletEventListener (provisions wallet on first login)
+- API `modules/payments`: PaymentGateway interface (6.4.5), ZarinpalGateway (6.4.3, PG v4), ZibalGateway (6.4.4, v1), PaymentsService (create 6.4.6, public GET /payments/callback 6.4.8 with raw logging to payment_callbacks 6.4.2, idempotent verify 6.4.9, manual re-verify 6.4.10, PaymentCompleted/PaymentFailed events 6.4.11/6.4.12), PaymentsController
+- API `modules/requests`: RequestPaymentService + POST /requests/:id/pay (6.5.1) — wallet path = atomic debit + paid + invoice paid; online path = gateway-bound payment with double-payment guards (6.5.4/6.5.5)
+- Atomicity model: every mutation = Serializable tx + SELECT … FOR UPDATE on wallets/requests + append-only wallet_transactions row with UNIQUE idempotency_key (6.3.5)
+- Web: WalletBalance.tsx (6.1.5), TransactionItem.tsx (6.2.5), PayRequestActions.tsx (wallet/online chooser)
+- E2E verified on MySQL 8.0.44: phase-5 path 29/29, phase-6 path 22/22 (double-spend proof included); scripts at scripts/e2e-phase5.ts, e2e-phase6.ts
+- Migration `20260929181500_snake_case_fix` — fixes init-migration camelCase columns (tracking_code, preferred_locale, entity_id) that broke raw FOR UPDATE SQL
+- Infra fixes shipped en route: express added to api deps, DeploymentProfileModule registered @Global, console SMS driver (SMS_DRIVER=console), Zibal/PAYMENT_DEFAULT_GATEWAY env validation
 
 ---
 

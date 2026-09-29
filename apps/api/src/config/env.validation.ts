@@ -91,6 +91,14 @@ export const envValidation = Joi.object({
   }),
   ZARINPAL_SANDBOX: Joi.boolean().default(true),
   ZARINPAL_CALLBACK_URL: Joi.string().uri().required(),
+  // Zibal (Phase 6.4.4)
+  ZIBAL_MERCHANT_ID: Joi.string().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.required(),
+    otherwise: Joi.allow(''),
+  }),
+  ZIBAL_SANDBOX: Joi.boolean().default(true),
+  PAYMENT_DEFAULT_GATEWAY: Joi.string().valid('zarinpal', 'zibal').default('zarinpal'),
 
   // iPanel SMS
   IPANEL_API_KEY: Joi.string().when('NODE_ENV', {

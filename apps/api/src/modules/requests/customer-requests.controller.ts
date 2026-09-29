@@ -9,6 +9,8 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequestsService } from './requests.service';
 import { RequestHistoryService } from './request-history.service';
+import { RequestPaymentService } from './request-payment.service';
+import { PayRequestDto } from './dto/pay-request.dto';
 import {
   AddAttachmentDto,
   CancelRequestDto,
@@ -29,6 +31,7 @@ export class CustomerRequestsController {
   constructor(
     private readonly requests: RequestsService,
     private readonly history: RequestHistoryService,
+    private readonly requestPayment: RequestPaymentService,
   ) {}
 
   @Post()
@@ -102,6 +105,22 @@ export class CustomerRequestsController {
   @ApiOperation({ summary: 'جزئیات کامل درخواست' })
   async findById(@Param('id') id: string, @CurrentUser() user: { id: string; roles: string[] }) {
     return this.requests.findById(id, { id: user.id, roles: user.roles });
+  }
+
+  @Post(':id/pay')
+  @Permissions('requests.view')
+  @ApiOperation({ summary: 'پرداخت درخواست (کیف پول یا درگاه آنلاین) — فاز ۶' })
+  async pay(
+    @Param('id') id: string,
+    @Body() dto: PayRequestDto,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.requestPayment.payRequest({
+      userId: user.id,
+      requestId: id,
+      method: dto.method,
+      gateway: dto.gateway,
+    });
   }
 
   @Patch(':id/cancel')

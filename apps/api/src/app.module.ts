@@ -10,6 +10,8 @@ import { PrismaModule } from './database/prisma.module';
 import { AppController } from './app.controller';
 import { envValidation } from './config/env.validation';
 import { DeploymentProfileModule } from './config/deployment-profile.module';
+import { WalletModule } from './modules/wallet/wallet.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { CacheModule } from './cache/cache.module';
 import { QueueModule } from './queue/queue.module';
@@ -109,6 +111,8 @@ import { InvoicesModule } from './modules/invoices/invoices.module';
     PricingModule,
     DiscountsModule,
     InvoicesModule,
+    WalletModule,
+    PaymentsModule,
     // Additional modules (Phase 6+) added here
   ],
   controllers: [AppController],
