@@ -153,3 +153,41 @@ export const DOMAIN_EVENTS = {
   PAYMENT_FAILED: 'payment.failed',
   WALLET_UPDATED: 'wallet.updated',
 } as const;
+
+// ==================== PHASE 5 — PRICING / DISCOUNTS / INVOICES ====================
+
+/**
+ * Cost change types recorded in request_cost_histories (5.1.2 / 5.2.5).
+ * Every mutation of a price component writes one row per changed component.
+ */
+export const COST_CHANGE_TYPES = ['labor', 'material', 'additional', 'discount'] as const;
+
+export const PRICING_CONFIG = {
+  /** Reject negative final totals SERVER-SIDE (5.2.4) */
+  ALLOW_NEGATIVE_TOTAL: false,
+  /** Hard cap for a single cost component in Toman (safety rail) */
+  MAX_COMPONENT_TOMAN: 500_000_000,
+  MAX_REASON_LENGTH: 500,
+} as const;
+
+export const DISCOUNT_CONFIG = {
+  CODE_PATTERN: /^[A-Za-z0-9_-]{3,50}$/,
+  MIN_PERCENT_VALUE: 1,
+  MAX_PERCENT_VALUE: 100,
+  /** Hard cap for a fixed-amount discount in Toman (safety rail) */
+  MAX_FIXED_VALUE_TOMAN: 100_000_000,
+  /** Base for percent/fixed computation = labor + material + additional */
+  PERCENT_BASE: 'subtotal_before_discount' as const,
+} as const;
+
+export const INVOICE_CONFIG = {
+  NUMBER_PREFIX: 'INV',
+  /**
+   * Invoice numbers derive from the request id: INV-YYYY-000123.
+   * invoices are 1:1 with requests (request_id UNIQUE), so the numeric part
+   * is collision-free without an extra sequence table.
+   */
+  NUMBER_PAD: 6,
+  GENERATE_ON_STATUS: 'waiting_for_payment' as const,
+  PDF_PAGE_MARGIN: 40,
+} as const;

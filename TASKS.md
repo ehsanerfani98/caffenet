@@ -6,7 +6,7 @@
 > **Repository:** [ehsanerfani98/caffenet](https://github.com/ehsanerfani98/caffenet)  
 > **Created:** 2026-09-28  
 > **Status:** Architecture Revised — Pending Final Approval  
-> **Last Updated:** 2026-09-29 (Phase 4 complete)
+> **Last Updated:** 2026-09-29 (Phase 5 complete)
 
 ---
 
@@ -331,45 +331,56 @@ Additional fixes shipped with Phase 4 (pre-existing Phase 1–3 issues blocking 
 
 **Goal:** Complete financial pricing layer, immutable price audit, discounts, invoice generation.
 
+**Status:** ✅ Complete (2026-09-29)
+
 ### 5.1 Pricing Snapshot
 
-- [ ] 5.1.1 Create `request_costs` migration (request_id, labor_fee, material_cost, additional_cost, discount_amount, final_total, currency, snapshot_of_service_at_creation)
-- [ ] 5.1.2 Create `request_cost_histories` migration (every change: previous, new, type, user, reason, timestamp)
-- [ ] 5.1.3 Snapshot service price at request creation
-- [ ] 5.1.4 Implement all amounts as INTEGER (minor units, e.g. تومان × 100)
-- [ ] 5.1.5 Implement currency helper class (format, parse, convert)
+- [x] 5.1.1 Create `request_costs` migration (request_id, labor_fee, material_cost, additional_cost, discount_amount, final_total, currency, snapshot_of_service_at_creation) — model defined in Phase 1 Prisma schema; `RequestCost` row created at request creation (Phase 4) with labor-fee snapshot; migration run deferred to 1.2.6 (requires local MySQL)
+- [x] 5.1.2 Create `request_cost_histories` migration (every change: previous, new, type, user, reason, timestamp) — `RequestCostHistory` model + `buildHistoryRows()` writes one row per changed component inside the same tx
+- [x] 5.1.3 Snapshot service price at request creation — laborFeeSnapshot + RequestCost.laborFee (Phase 4 create flow); material/additional start at 0 and are operator-entered via 5.2.1
+- [x] 5.1.4 Implement all amounts as INTEGER (minor units, e.g. تومان × 100) — BigInt minor units (Rial) in DB; DTOs use Toman via toMinor()/toMajor(); integer-only math everywhere (`CurrencyHelper.add/finalTotal`)
+- [x] 5.1.5 Implement currency helper class (format, parse, convert) — `CurrencyHelper` in @caffenet/shared (utils/currency.ts): toMinor/toMajor/format/formatMajor/parse (Persian+Arabic digits, ٬ ، , separators)/convert (IRT↔IRR)/finalTotal
 
 ### 5.2 Cost Management
 
-- [ ] 5.2.1 Implement `PATCH /api/v1/operator/requests/:id/costs` (operator sets material + additional)
-- [ ] 5.2.2 Implement permission-gated discount application
-- [ ] 5.2.3 Implement `FinalTotal = Labor + Material + Additional - Discount` server-side
-- [ ] 5.2.4 Reject negative final total
-- [ ] 5.2.5 Auto-record cost history entries
-- [ ] 5.2.6 Emit `RequestPriceChanged` event
-- [ ] 5.2.7 Implement `PriceBreakdown` React component
+- [x] 5.2.1 Implement `PATCH /api/v1/operator/requests/:id/costs` (operator sets material + additional) — OperatorCostsController + RequestCostsService.updateCosts; Serializable tx + SELECT FOR UPDATE on request AND request_costs rows; assigned-operator scoping; price frozen after waiting_for_payment
+- [x] 5.2.2 Implement permission-gated discount application — `discounts.apply` permission (operator/admin) on POST /discounts/apply; customers limited to POST /discounts/validate (ownership-enforced preview)
+- [x] 5.2.3 Implement `FinalTotal = Labor + Material + Additional - Discount` server-side — single source of truth: RequestCostsService.computeFinalTotal; client never sends totals
+- [x] 5.2.4 Reject negative final total — ConflictException with Persian message inside the tx
+- [x] 5.2.5 Auto-record cost history entries — RequestCostHistory rows per changed component (changeType: labor/material/additional/discount) with previous/new/user/reason
+- [x] 5.2.6 Emit `RequestPriceChanged` event — DOMAIN_EVENTS.REQUEST_PRICE_CHANGED + RealtimeService.notifyRequestPriceChanged (request channel) + user channels (customer/operator)
+- [x] 5.2.7 Implement `PriceBreakdown` React component — apps/web/components/common/PriceBreakdown.tsx (RTL-first, compact zero-row hiding, violet total block)
 
 ### 5.3 Discount System
 
-- [ ] 5.3.1 Create `discount_codes` migration (code, type [percent/fixed], value, min_order, max_discount, usage_limit, used_count, starts_at, expires_at, active)
-- [ ] 5.3.2 Create `discount_usages` migration (discount_id, request_id, user_id, amount_saved, used_at)
-- [ ] 5.3.3 Implement `POST /api/v1/discounts/validate` (preview discount)
-- [ ] 5.3.4 Implement `POST /api/v1/discounts/apply` (lock to request)
-- [ ] 5.3.5 Implement admin CRUD for discounts
-- [ ] 5.3.6 Implement usage limit + expiration checks
-- [ ] 5.3.7 Implement per-user usage limit
-- [ ] 5.3.8 Atomic usage increment (SELECT FOR UPDATE)
+- [x] 5.3.1 Create `discount_codes` migration (code, type [percent/fixed], value, min_order, max_discount, usage_limit, used_count, starts_at, expires_at, active) — Phase 1 Prisma schema
+- [x] 5.3.2 Create `discount_usages` migration (discount_id, request_id, user_id, amount_saved, used_at) — Phase 1 Prisma schema; UNIQUE(request_id) = one discount per request
+- [x] 5.3.3 Implement `POST /api/v1/discounts/validate` (preview discount) — validity window/limits/per-user + per-request preview (subtotal, discountAmount, finalTotal) with machine-readable failure codes
+- [x] 5.3.4 Implement `POST /api/v1/discounts/apply` (lock to request) — Serializable tx: FOR UPDATE on request + discount + request_costs rows; writes DiscountUsage, increments usedCount, updates RequestCost.discountAmount + finalTotal, writes history row, emits price_changed + audit
+- [x] 5.3.5 Implement admin CRUD for discounts — POST/GET/PATCH/DELETE /admin/discounts (+ /:id/usages); used codes cannot be hard-deleted (409 → deactivate instead); AdminDiscountActionsController adds POST /admin/requests/:id/remove-discount (revert before invoice)
+- [x] 5.3.6 Implement usage limit + expiration checks — active flag, startsAt/expiresAt window, total usageLimit — all re-checked INSIDE the apply lock
+- [x] 5.3.7 Implement per-user usage limit — usageLimitPerUser vs COUNT(discount_usages by user), checked inside the tx
+- [x] 5.3.8 Atomic usage increment (SELECT FOR UPDATE) — `SELECT … FROM discount_codes WHERE code = ? FOR UPDATE` inside Serializable tx before usedCount increment
 
 ### 5.4 Invoice Generation
 
-- [ ] 5.4.1 Create `invoices` migration (invoice_number unique, customer_id, request_id, all cost fields, payment_status, timestamps)
-- [ ] 5.4.2 Create `invoice_items` migration (line items: labor, material, additional, discount)
-- [ ] 5.4.3 Implement auto-generate invoice when request enters WaitingForPayment
-- [ ] 5.4.4 Implement `GET /api/v1/invoices/:id`
-- [ ] 5.4.5 Implement `GET /api/v1/invoices/:id/download` (PDF via PDFKit / Recharts)
-- [ ] 5.4.6 Implement `InvoiceCard` React component
+- [x] 5.4.1 Create `invoices` migration (invoice_number unique, customer_id, request_id, all cost fields, payment_status, timestamps) — Phase 1 Prisma schema; invoice number = INV-YYYY-NNNNNN derived from request id (collision-free, 1:1)
+- [x] 5.4.2 Create `invoice_items` migration (line items: labor, material, additional, discount) — Phase 1 Prisma schema; 4 snapshot lines written at generation
+- [x] 5.4.3 Implement auto-generate invoice when request enters WaitingForPayment — RequestWorkflowService.changeStatus calls InvoicesService.generateForRequest INSIDE the same Serializable tx (idempotent: returns existing invoice)
+- [x] 5.4.4 Implement `GET /api/v1/invoices/:id` — + GET /invoices (mine), GET /invoices/number/:invoiceNumber; customer(owner)/assigned-operator/admin authorization
+- [x] 5.4.5 Implement `GET /api/v1/invoices/:id/download` (PDF via PDFKit / Recharts) — PDFKit + Vazirmatn (OFL) + arabic-persian-reshaper + bidi-js (shape + visual reorder for Persian RTL); snapshot-based, server-rendered; graceful Helvetica/EN fallback when font missing
+- [x] 5.4.6 Implement `InvoiceCard` React component — apps/web/components/common/InvoiceCard.tsx (status badges, line items, total block, PDF download link)
 
-**Phase 5 Exit Criteria:** Operator can register material costs, apply discounts (permission-gated), invoice auto-generated, all changes audited server-side, no float math anywhere.
+**Phase 5 Exit Criteria:** ✅ Operator can register material costs, apply discounts (permission-gated), invoice auto-generated, all changes audited server-side, no float math anywhere. **Phase 5 marked complete on 2026-09-29.**
+
+Implementation notes shipped with Phase 5:
+
+- Shared: `types/finance.ts` (RequestCostDto / RequestCostHistoryDto / DiscountCodeDto / DiscountValidationResult / InvoiceDto / InvoiceItemDto), `utils/currency.ts` (CurrencyHelper), constants `COST_CHANGE_TYPES` / `PRICING_CONFIG` / `DISCOUNT_CONFIG` / `INVOICE_CONFIG`
+- API: new `modules/pricing` (RequestCostsService + OperatorCostsController + RequestCostsController), `modules/discounts` (DiscountsService + DiscountsController + AdminDiscountsController + AdminDiscountActionsController), `modules/invoices` (InvoicesService + InvoicesController + pdf/invoice-pdf.generator)
+- Workflow hook: invoice generation is atomic with the transition to waiting_for_payment; response includes `invoiceNumber`
+- Dependencies: `pdfkit` + `@types/pdfkit`, `arabic-persian-reshaper`, `bidi-js`; Vazirmatn Regular/Bold committed under `apps/api/assets/fonts/` (OFL license)
+- Type declaration added for untyped `arabic-persian-reshaper` (`src/types/untyped-modules.d.ts`)
+- All 4 workspaces pass `typecheck` + `build` cleanly
 
 ---
 

@@ -4,10 +4,12 @@ import { PrismaService } from '../../database/prisma.service';
 import { EventBusService } from '../../events/event-bus.service';
 import { RealtimeService } from '../../realtime/realtime.service';
 import { AuditService } from '../audit/audit.service';
+import { InvoicesService } from '../invoices/invoices.service';
 import { RequestStatusMachine } from './request-status-machine';
 import {
   AuditAction,
   DOMAIN_EVENTS,
+  INVOICE_CONFIG,
   REQUEST_ADMIN_ONLY_STATUSES,
   RequestStatus,
 } from '@caffenet/shared';
@@ -33,6 +35,7 @@ export class RequestWorkflowService {
     private readonly events: EventBusService,
     private readonly realtime: RealtimeService,
     private readonly audit: AuditService,
+    private readonly invoices: InvoicesService,
   ) {}
 
   /**
@@ -91,6 +94,15 @@ export class RequestWorkflowService {
             note: dto.note,
           },
         });
+
+        // Phase 5.4.3 — auto-generate the invoice atomically when the request
+        // enters waiting_for_payment (snapshot of the current cost row).
+        let invoiceNumber: string | null = null;
+        if (dto.status === (INVOICE_CONFIG.GENERATE_ON_STATUS as RequestStatus)) {
+          const invoice = await this.invoices.generateForRequest(locked.id, tx);
+          invoiceNumber = String(invoice.invoiceNumber);
+        }
+
         return {
           id: locked.id,
           trackingCode: locked.tracking_code,
@@ -99,6 +111,7 @@ export class RequestWorkflowService {
           previousStatus: locked.status,
           newStatus: dto.status,
           historyId: history.id,
+          invoiceNumber,
         };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -146,6 +159,7 @@ export class RequestWorkflowService {
       status: result.newStatus,
       statusFa: RequestStatusMachine.faLabel(result.newStatus),
       note: dto.note ?? null,
+      invoiceNumber: result.invoiceNumber,
     };
   }
 

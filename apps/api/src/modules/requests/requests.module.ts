@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { ServicesModule } from '../services/services.module';
 import { FilesModule } from '../files/files.module';
+import { InvoicesModule } from '../invoices/invoices.module';
 import { RequestsService } from './requests.service';
 import { RequestWorkflowService } from './request-workflow.service';
 import { RequestAssignmentService } from './request-assignment.service';
@@ -17,10 +18,11 @@ import { AdminRequestsController } from './admin-requests.controller';
  *  - AuthModule      → JwtAuthGuard + strategy
  *  - ServicesModule  → DynamicFormValidator (server-side form validation)
  *  - FilesModule     → attachment signed URLs
+ *  - InvoicesModule  → auto-invoice generation on waiting_for_payment (Phase 5.4.3)
  * RealtimeModule / EventsModule / AuditModule are @Global — no import needed.
  */
 @Module({
-  imports: [AuthModule, ServicesModule, FilesModule],
+  imports: [AuthModule, ServicesModule, FilesModule, InvoicesModule],
   controllers: [CustomerRequestsController, OperatorRequestsController, AdminRequestsController],
   providers: [
     RequestsService,
