@@ -250,8 +250,8 @@ Stakeholder feedback incorporated:
 - [x] 3.3.4 Implement field type support: text, textarea, number, email, phone, date, time, datetime, select, multiselect, radio, checkbox, file, image
 - [x] 3.3.5 Implement validation rule schema (JSON with type, params, message)
 - [x] 3.3.6 Implement server-side dynamic validation engine (`DynamicFormValidator`)
-- [ ] 3.3.7 Implement client-side `DynamicForm` renderer component — deferred to Phase 7 (Customer UI)
-- [ ] 3.3.8 Implement conditional field visibility rules — deferred to Phase 7 (Customer UI)
+- [x] 3.3.7 Implement client-side `DynamicForm` renderer component — delivered in Phase 7 (`components/common/DynamicForm.tsx`)
+- [x] 3.3.8 Implement conditional field visibility rules — delivered in Phase 7 (Customer UI)
 - [x] 3.3.9 Implement file/image field integration with uploader (via Files module)
 
 **Phase 3 Exit Criteria:** ✅ Admin can build category → service → dynamic form. Customer can browse and view forms. Backend validates all submissions server-side via DynamicFormValidator. Backend re-validates form submissions — never trusts client. File uploads protected (MIME + size + filename + hash). Private files served ONLY via backend-signed URLs. **Phase 3 marked complete on 2026-09-28.**
@@ -459,102 +459,102 @@ Implementation notes shipped with Phase 6:
 
 ### 7.1 App Shell
 
-- [ ] 7.1.1 Setup Next.js 16 App Router
-- [ ] 7.1.2 Configure RTL (`dir="rtl" lang="fa"`)
-- [ ] 7.1.3 Configure Vazirmatn font (Persian)
-- [ ] 7.1.4 Configure Tailwind 4 + shadcn/ui
-- [ ] 7.1.5 Configure theme tokens (color, spacing, typography, radius)
-- [ ] 7.1.6 Configure dark mode
-- [ ] 7.1.7 Setup Zustand stores (auth, ui, cart-like request draft)
-- [ ] 7.1.8 Setup TanStack Query client
-- [ ] 7.1.9 Setup Axios instance with interceptors (auth, refresh, error normalization)
-- [ ] 7.1.10 Setup react-i18next (fa primary, en secondary)
+- [x] 7.1.1 Setup Next.js 16 App Router
+- [x] 7.1.2 Configure RTL (`dir="rtl" lang="fa"`)
+- [x] 7.1.3 Configure Vazirmatn font (Persian)
+- [x] 7.1.4 Configure Tailwind 4 + shadcn/ui
+- [x] 7.1.5 Configure theme tokens (color, spacing, typography, radius)
+- [x] 7.1.6 Configure dark mode
+- [x] 7.1.7 Setup Zustand stores (auth, ui, cart-like request draft)
+- [x] 7.1.8 Setup TanStack Query client
+- [x] 7.1.9 Setup Axios instance with interceptors (auth, refresh, error normalization)
+- [x] 7.1.10 Setup react-i18next (fa primary, en secondary) — done with `next-intl` (App Router native, fa primary / en secondary) instead of react-i18next
 
 ### 7.2 Customer Layout & Navigation
 
-- [ ] 7.2.1 `BottomNavigation` (خانه، خدمات، درخواست‌ها، چت، پروفایل)
-- [ ] 7.2.2 `MobileHeader` (with notification bell + wallet balance)
-- [ ] 7.2.3 Safe area insets (`env(safe-area-inset-*)`)
-- [ ] 7.2.4 Pull-to-refresh hook
-- [ ] 7.2.5 Bottom Sheet component (Radix)
-- [ ] 7.2.6 Full-screen Modal component
-- [ ] 7.2.7 Snackbar / Toast system
-- [ ] 7.2.8 Skeleton loaders
-- [ ] 7.2.9 Empty states
-- [ ] 7.2.10 Error states
+- [x] 7.2.1 `BottomNavigation` (خانه، خدمات، درخواست‌ها، چت، پروفایل)
+- [x] 7.2.2 `MobileHeader` (with notification bell + wallet balance)
+- [x] 7.2.3 Safe area insets (`env(safe-area-inset-*)`)
+- [x] 7.2.4 Pull-to-refresh hook
+- [x] 7.2.5 Bottom Sheet component (Radix)
+- [x] 7.2.6 Full-screen Modal component
+- [x] 7.2.7 Snackbar / Toast system
+- [x] 7.2.8 Skeleton loaders
+- [x] 7.2.9 Empty states
+- [x] 7.2.10 Error states
 
 ### 7.3 Auth Pages
 
-- [ ] 7.3.1 Login page (phone/email + password)
-- [ ] 7.3.2 Register page
-- [ ] 7.3.3 OTP verification page
-- [ ] 7.3.4 Forgot password page
-- [ ] 7.3.5 Reset password page
-- [ ] 7.3.6 Auth route guards (public/private)
+- [x] 7.3.1 Login page (phone/email + password)
+- [x] 7.3.2 Register page
+- [x] 7.3.3 OTP verification page
+- [x] 7.3.4 Forgot password page
+- [x] 7.3.5 Reset password page
+- [x] 7.3.6 Auth route guards (public/private)
 
 ### 7.4 Home Page
 
-- [ ] 7.4.1 Greeting + wallet balance card
-- [ ] 7.4.2 Search bar (debounced)
-- [ ] 7.4.3 Categories horizontal scroll
-- [ ] 7.4.4 Popular services
-- [ ] 7.4.5 Active request card (with progress)
-- [ ] 7.4.6 Recent requests list
-- [ ] 7.4.7 Notification indicator
+- [x] 7.4.1 Greeting + wallet balance card
+- [x] 7.4.2 Search bar (debounced)
+- [x] 7.4.3 Categories horizontal scroll
+- [x] 7.4.4 Popular services
+- [x] 7.4.5 Active request card (with progress)
+- [x] 7.4.6 Recent requests list
+- [x] 7.4.7 Notification indicator
 
 ### 7.5 Service Pages
 
-- [ ] 7.5.1 Categories grid page
-- [ ] 7.5.2 Services list page (filter + search + pagination)
-- [ ] 7.5.3 Service detail page
-- [ ] 7.5.4 `ServiceCard` component
-- [ ] 7.5.5 `CategoryCard` component
+- [x] 7.5.1 Categories grid page
+- [x] 7.5.2 Services list page (filter + search + pagination)
+- [x] 7.5.3 Service detail page
+- [x] 7.5.4 `ServiceCard` component
+- [x] 7.5.5 `CategoryCard` component
 
 ### 7.6 Request Flow (Multi-Step)
 
-- [ ] 7.6.1 Step 1: Service confirmation
-- [ ] 7.6.2 Step 2: Dynamic form fill
-- [ ] 7.6.3 Step 3: File upload
-- [ ] 7.6.4 Step 4: Contact method selection
-- [ ] 7.6.5 Step 5: Review
-- [ ] 7.6.6 Step 6: Submit (with optimistic UI)
-- [ ] 7.6.7 Stepper / progress indicator
-- [ ] 7.6.8 `FileUploader` component (drag-drop + camera capture)
-- [ ] 7.6.9 `DynamicForm` renderer
+- [x] 7.6.1 Step 1: Service confirmation
+- [x] 7.6.2 Step 2: Dynamic form fill
+- [x] 7.6.3 Step 3: File upload
+- [x] 7.6.4 Step 4: Contact method selection
+- [x] 7.6.5 Step 5: Review
+- [x] 7.6.6 Step 6: Submit (with optimistic UI)
+- [x] 7.6.7 Stepper / progress indicator
+- [x] 7.6.8 `FileUploader` component (drag-drop + camera capture)
+- [x] 7.6.9 `DynamicForm` renderer
 
 ### 7.7 Request Tracking & List
 
-- [ ] 7.7.1 My requests list page
-- [ ] 7.7.2 Request detail page with timeline
-- [ ] 7.7.3 `RequestTimeline` component
-- [ ] 7.7.4 `RequestCard` component
-- [ ] 7.7.5 Chat entry point
-- [ ] 7.7.6 Invoice entry point
-- [ ] 7.7.7 Pay button (when WaitingForPayment)
+- [x] 7.7.1 My requests list page
+- [x] 7.7.2 Request detail page with timeline
+- [x] 7.7.3 `RequestTimeline` component
+- [x] 7.7.4 `RequestCard` component
+- [x] 7.7.5 Chat entry point
+- [x] 7.7.6 Invoice entry point
+- [x] 7.7.7 Pay button (when WaitingForPayment)
 
 ### 7.8 Wallet Pages
 
-- [ ] 7.8.1 Wallet home (balance + actions)
-- [ ] 7.8.2 Deposit flow (amount → gateway → verify → success)
-- [ ] 7.8.3 Transactions list (paginated, filterable)
-- [ ] 7.8.4 `TransactionItem` component
-- [ ] 7.8.5 Invoice viewer
-- [ ] 7.8.6 `InvoiceCard` component
+- [x] 7.8.1 Wallet home (balance + actions)
+- [x] 7.8.2 Deposit flow (amount → gateway → verify → success)
+- [x] 7.8.3 Transactions list (paginated, filterable)
+- [x] 7.8.4 `TransactionItem` component
+- [x] 7.8.5 Invoice viewer
+- [x] 7.8.6 `InvoiceCard` component
 
 ### 7.9 Profile Pages
 
-- [ ] 7.9.1 Profile view & edit
-- [ ] 7.9.2 Change password
-- [ ] 7.9.3 Manage contact info
-- [ ] 7.9.4 Sessions list & revoke
-- [ ] 7.9.5 Notification preferences
+- [x] 7.9.1 Profile view & edit
+- [x] 7.9.2 Change password
+- [x] 7.9.3 Manage contact info
+- [x] 7.9.4 Sessions list & revoke
+- [x] 7.9.5 Notification preferences — per-type toggles + Web Push switch, persisted locally; server sync lands in Phase 11
 
 ### 7.10 Notifications Page
 
-- [ ] 7.10.1 Notification list
-- [ ] 7.10.2 Mark as read (single + bulk)
-- [ ] 7.10.3 `NotificationItem` component
-- [ ] 7.10.4 Filter by type
+- [x] 7.10.1 Notification list — UI complete; data source wired when the Phase 11 backend module lands
+- [x] 7.10.2 Mark as read (single + bulk) — single + bulk UI complete; server call wired in Phase 11
+- [x] 7.10.3 `NotificationItem` component — built (`components/common/NotificationItem.tsx`)
+- [x] 7.10.4 Filter by type — filter tabs (همه/درخواست‌ها/کیف پول/پیام‌ها/سیستم)
 
 **Phase 7 Exit Criteria:** Customer can complete full flow: login → browse → submit request → track → chat → pay → receive invoice — all on mobile, native-feel.
 
