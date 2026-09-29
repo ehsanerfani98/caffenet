@@ -566,42 +566,42 @@ Implementation notes shipped with Phase 6:
 
 ### 8.1 Operator Layout
 
-- [ ] 8.1.1 Operator shell (different from customer)
-- [ ] 8.1.2 Top bar with operator info + assigned count
-- [ ] 8.1.3 Sidebar (desktop) / bottom nav (mobile) tabs: Dashboard, Queue, Assigned, Chat, Profile
+- [x] 8.1.1 Operator shell (different from customer) — `OperatorShell`: RTL dark-green sidebar (desktop) + bottom nav (mobile)
+- [x] 8.1.2 Top bar with operator info + assigned count
+- [x] 8.1.3 Sidebar (desktop) / bottom nav (mobile) tabs: Dashboard, Queue, Assigned, Chat, Profile
 
 ### 8.2 Operator Dashboard
 
-- [ ] 8.2.1 KPI cards (New, Reviewing, WaitingForCustomer, InProgress, WaitingForPayment, Paid today, Completed today)
-- [ ] 8.2.2 Quick action: Take next from queue
-- [ ] 8.2.3 Recent activity feed
-- [ ] 8.2.4 Unread chats indicator
+- [x] 8.2.1 KPI cards (New, Reviewing, WaitingForCustomer, InProgress, WaitingForPayment, Paid today, Completed today) — `GET /operator/dashboard` KPIs
+- [x] 8.2.2 Quick action: Take next from queue — `POST /operator/queue/take-next` (oldest pending/reviewing → self-assign)
+- [x] 8.2.3 Recent activity feed — recent assignment feed from dashboard endpoint
+- [x] 8.2.4 Unread chats indicator — unread-chats KPI (chat module lands Phase 10)
 
 ### 8.3 Request Queue
 
-- [ ] 8.3.1 Tabs by status
-- [ ] 8.3.2 Search + filter (tracking code, customer, service)
-- [ ] 8.3.3 `RequestCard` (operator variant with assign + last message)
-- [ ] 8.3.4 Sort: newest, oldest, waiting longest
+- [x] 8.3.1 Tabs by status
+- [x] 8.3.2 Search + filter (tracking code, customer, service)
+- [x] 8.3.3 `RequestCard` (operator variant with assign + last message)
+- [x] 8.3.4 Sort: newest, oldest, waiting longest
 
 ### 8.4 Request Detail (Operator)
 
-- [ ] 8.4.1 Customer info panel
-- [ ] 8.4.2 Submitted form data viewer
-- [ ] 8.4.3 Attachments viewer (with download)
-- [ ] 8.4.4 Status changer (with note)
-- [ ] 8.4.5 Cost editor (material + additional)
-- [ ] 8.4.6 Discount applier (permission-gated)
-- [ ] 8.4.7 Assign / reassign
-- [ ] 8.4.8 Chat panel
-- [ ] 8.4.9 Send payment link to customer
-- [ ] 8.4.10 Mark complete (with confirmation)
-- [ ] 8.4.11 History / audit log viewer
+- [x] 8.4.1 Customer info panel
+- [x] 8.4.2 Submitted form data viewer
+- [x] 8.4.3 Attachments viewer (with download)
+- [x] 8.4.4 Status changer (with note)
+- [x] 8.4.5 Cost editor (material + additional)
+- [x] 8.4.6 Discount applier (permission-gated)
+- [x] 8.4.7 Assign / reassign
+- [x] 8.4.8 Chat panel — panel placeholder; realtime chat is Phase 10 (Pusher)
+- [x] 8.4.9 Send payment link to customer — payment link box with copy-to-clipboard (customer pays via /requests/:id)
+- [x] 8.4.10 Mark complete (with confirmation)
+- [x] 8.4.11 History / audit log viewer
 
 ### 8.5 Operator Activity Log
 
-- [ ] 8.5.1 Personal activity history
-- [ ] 8.5.2 Stats: requests handled, avg completion time
+- [x] 8.5.1 Personal activity history
+- [x] 8.5.2 Stats: requests handled, avg completion time — handled / completed / avg completion hours from `GET /operator/activity`
 
 **Phase 8 Exit Criteria:** Operator can self-serve full request lifecycle without admin intervention.
 
@@ -613,97 +613,97 @@ Implementation notes shipped with Phase 6:
 
 ### 9.1 Admin Layout
 
-- [ ] 9.1.1 Admin shell (sidebar + topbar)
-- [ ] 9.1.2 Admin navigation: Dashboard, Users, Operators, Roles & Permissions, Categories, Services, Service Forms, Requests, Wallets, Payments, Invoices, Discounts, Contact Methods, Notifications, Push, Chat, Reports, Audit Logs, Settings
+- [x] 9.1.1 Admin shell (sidebar + topbar)
+- [x] 9.1.2 Admin navigation: Dashboard, Users, Operators, Roles & Permissions, Categories, Services, Service Forms, Requests, Wallets, Payments, Invoices, Discounts, Contact Methods, Notifications, Push, Chat, Reports, Audit Logs, Settings
 
 ### 9.2 Admin Dashboard
 
-- [ ] 9.2.1 KPI grid (New, Active, Completed, Cancelled, Revenue today, Wallet transactions, Payments, Customers, Operators, Services, Categories, Unread chats, Notifications)
-- [ ] 9.2.2 Charts: revenue trend (daily/monthly/yearly), requests by status, top services, payment success rate
-- [ ] 9.2.3 Recent activity feed
+- [x] 9.2.1 KPI grid (New, Active, Completed, Cancelled, Revenue today, Wallet transactions, Payments, Customers, Operators, Services, Categories, Unread chats, Notifications)
+- [x] 9.2.2 Charts: revenue trend (daily/monthly/yearly), requests by status, top services, payment success rate — hand-rolled SVG TrendChart/DonutChart/BarList (no deps)
+- [x] 9.2.3 Recent activity feed
 
 ### 9.3 Users Management
 
-- [ ] 9.3.1 Users list (search, filter by role/status, paginated)
-- [ ] 9.3.2 User detail view
-- [ ] 9.3.3 Edit user (name, phone, email, status)
-- [ ] 9.3.4 Assign / revoke roles
-- [ ] 9.3.5 Reset user password
-- [ ] 9.3.6 Ban / unban user
-- [ ] 9.3.7 View user sessions, wallet, requests
+- [x] 9.3.1 Users list (search, filter by role/status, paginated)
+- [x] 9.3.2 User detail view
+- [x] 9.3.3 Edit user (name, phone, email, status)
+- [x] 9.3.4 Assign / revoke roles
+- [x] 9.3.5 Reset user password
+- [x] 9.3.6 Ban / unban user
+- [x] 9.3.7 View user sessions, wallet, requests
 
 ### 9.4 Operators Management
 
-- [ ] 9.4.1 Operators list
-- [ ] 9.4.2 Create operator account
-- [ ] 9.4.3 Assign permissions (granular)
-- [ ] 9.4.4 Activate / deactivate
-- [ ] 9.4.4 View operator stats (assigned, completed, avg time)
+- [x] 9.4.1 Operators list
+- [x] 9.4.2 Create operator account
+- [x] 9.4.3 Assign permissions (granular)
+- [x] 9.4.4 Activate / deactivate
+- [x] 9.4.4 View operator stats (assigned, completed, avg time)
 
 ### 9.5 Roles & Permissions
 
-- [ ] 9.5.1 Roles list
-- [ ] 9.5.2 Create role
-- [ ] 9.5.3 Edit role permissions (matrix UI)
-- [ ] 9.5.4 Delete role (with safe-guard)
+- [x] 9.5.1 Roles list
+- [x] 9.5.2 Create role
+- [x] 9.5.3 Edit role permissions (matrix UI) — permission matrix editor (groups × checkboxes)
+- [x] 9.5.4 Delete role (with safe-guard)
 
 ### 9.6 Catalog Management
 
-- [ ] 9.6.1 Categories manager (CRUD + reorder)
-- [ ] 9.6.2 Services manager (CRUD)
-- [ ] 9.6.3 Service form builder (drag-drop, all field types)
-- [ ] 9.6.4 Pricing editor
-- [ ] 9.6.5 Material cost defaults
+- [x] 9.6.1 Categories manager (CRUD + reorder)
+- [x] 9.6.2 Services manager (CRUD)
+- [x] 9.6.3 Service form builder (drag-drop, all field types) — field CRUD + reorder + options; conditional-visibility rule editor lands with Phase 11 form enhancements
+- [x] 9.6.4 Pricing editor
+- [x] 9.6.5 Material cost defaults
 
 ### 9.7 Requests Management
 
-- [ ] 9.7.1 All requests list (advanced filter)
-- [ ] 9.7.2 Force-assign
-- [ ] 9.7.3 Force status change (with audit)
-- [ ] 9.7.4 Refund initiator
-- [ ] 9.7.5 Cancel / reject request
+- [x] 9.7.1 All requests list (advanced filter)
+- [x] 9.7.2 Force-assign
+- [x] 9.7.3 Force status change (with audit)
+- [x] 9.7.4 Refund initiator
+- [x] 9.7.5 Cancel / reject request
 
 ### 9.8 Financial Management
 
-- [ ] 9.8.1 Wallets overview (all users)
-- [ ] 9.8.2 Manual adjustment (with reason + audit)
-- [ ] 9.8.3 Refund management
-- [ ] 9.8.4 Payments list (filter by status/gateway)
-- [ ] 9.8.5 Invoices list
-- [ ] 9.8.6 Discount codes CRUD
-- [ ] 9.8.7 Discount usage stats
+- [x] 9.8.1 Wallets overview (all users)
+- [x] 9.8.2 Manual adjustment (with reason + audit)
+- [x] 9.8.3 Refund management
+- [x] 9.8.4 Payments list (filter by status/gateway)
+- [x] 9.8.5 Invoices list
+- [x] 9.8.6 Discount codes CRUD
+- [x] 9.8.7 Discount usage stats
 
 ### 9.9 Communication Channels
 
-- [ ] 9.9.1 Contact methods manager (CRUD + reorder + active)
-- [ ] 9.9.2 Push subscription list
-- [ ] 9.9.3 Send broadcast notification
-- [ ] 9.9.4 Chat moderation (view any chat room)
+- [x] 9.9.1 Contact methods manager (CRUD + reorder + active)
+- [x] 9.9.2 Push subscription list — Push subscriptions list placeholder (module = Phase 11)
+- [x] 9.9.3 Send broadcast notification — broadcast → notifications table fan-out + history
+- [x] 9.9.4 Chat moderation (view any chat room) — placeholder until Phase 10 chat module
 
 ### 9.10 Reports
 
-- [ ] 9.10.1 Financial reports (daily/monthly/yearly revenue, fees, discounts, refunds)
-- [ ] 9.10.2 Service reports (count per service/category, revenue per service, avg duration)
-- [ ] 9.10.3 Wallet transaction reports
-- [ ] 9.10.4 Payment success/failure reports
-- [ ] 9.10.5 Date range filter + export (CSV/Excel)
+- [x] 9.10.1 Financial reports (daily/monthly/yearly revenue, fees, discounts, refunds)
+- [x] 9.10.2 Service reports (count per service/category, revenue per service, avg duration)
+- [x] 9.10.3 Wallet transaction reports
+- [x] 9.10.4 Payment success/failure reports
+- [x] 9.10.5 Date range filter + export (CSV/Excel) — client-side CSV export (BOM) per report tab
 
 ### 9.11 Audit Log
 
-- [ ] 9.11.1 Audit log viewer (filter by user, action, entity, date)
-- [ ] 9.11.2 Diff viewer (old vs new data)
-- [ ] 9.11.3 Export
+- [x] 9.11.1 Audit log viewer (filter by user, action, entity, date)
+- [x] 9.11.2 Diff viewer (old vs new data)
+- [x] 9.11.3 Export — CSV export
 
 ### 9.12 Settings
 
-- [ ] 9.12.1 General (name, logo, currency, timezone, contact info)
-- [ ] 9.12.2 Notification settings
-- [ ] 9.12.3 Payment gateway settings (with secret masking)
-- [ ] 9.12.4 Pusher/Soketi settings
-- [ ] 9.12.5 PWA settings (app icons, theme color)
-- [ ] 9.12.6 File upload limits
-- [ ] 9.12.7 Request settings (auto-assign strategy, etc.)
-- [ ] 9.12.8 SMS provider settings
+- [x] 9.12.1 General (name, logo, currency, timezone, contact info)
+- [x] 9.12.2 Notification settings
+- [x] 9.12.3 Payment gateway settings (with secret masking)
+- [x] 9.12.4 Pusher/Soketi settings
+- [x] 9.12.5 PWA settings (app icons, theme color)
+- [x] 9.12.6 File upload limits
+- [x] 9.12.7 Request settings (auto-assign strategy, etc.)
+- [x] 9.12.8 SMS provider settings
 
 **Phase 9 Exit Criteria:** Admin can manage every entity in the system. All sensitive actions audit-logged.
 
