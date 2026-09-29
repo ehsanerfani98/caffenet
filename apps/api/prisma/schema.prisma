@@ -33,7 +33,7 @@ model User {
   fullName      String?   @map("full_name") @db.VarChar(255)
   avatarUrl     String?   @map("avatar_url") @db.VarChar(500)
   status        String    @db.VarChar(20) @default("pending_otp") // UserStatus enum
-  preferredLocale String  @db.VarChar(5) @default("fa")
+  preferredLocale String  @map("preferred_locale") @db.VarChar(5) @default("fa")
   preferredContactMethodId BigInt? @map("preferred_contact_method_id")
   lastLoginAt   DateTime? @map("last_login_at")
   lastLoginIp   String?   @map("last_login_ip") @db.VarChar(45)
@@ -266,7 +266,7 @@ model ServiceField {
 model Request {
   id                BigInt    @id @default(autoincrement())
   uuid              String    @unique @db.VarChar(36) @default(uuid())
-  trackingCode      String    @unique @db.VarChar(20) // e.g. 'CF-2026-001234'
+  trackingCode      String    @map("tracking_code") @unique @db.VarChar(20) // e.g. 'CF-2026-001234'
   customerId        BigInt    @map("customer_id")
   serviceId         BigInt    @map("service_id")
   status            String    @db.VarChar(30) @default("pending") // RequestStatus
@@ -825,7 +825,7 @@ model AuditLog {
   action      String    @db.VarChar(50) // AuditAction enum
   // Resource
   entity      String    @db.VarChar(50) // 'user', 'request', 'wallet', 'payment' etc.
-  entityId    String?   @db.VarChar(36) // uuid of the entity
+  entityId    String?   @map("entity_id") @db.VarChar(36) // uuid of the entity
   // Diff
   oldData     Json?     @map("old_data")
   newData     Json?     @map("new_data")

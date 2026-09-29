@@ -2,6 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SMS_GATEWAY_TOKEN } from './sms.interface';
 import { IPanelSmsGateway } from './adapters/ipanel.sms.gateway';
+import { ConsoleSmsGateway } from './adapters/console.sms.gateway';
 
 /**
  * SMS module — exposes a single SmsGateway provider.
@@ -21,6 +22,8 @@ import { IPanelSmsGateway } from './adapters/ipanel.sms.gateway';
         switch (driver) {
           case 'ipanel':
             return new IPanelSmsGateway(config);
+          case 'console':
+            return new ConsoleSmsGateway();
           // case 'kavenegar': return new KavenegarSmsGateway(config);
           default:
             throw new Error(`Unknown SMS driver: ${driver}`);

@@ -9,7 +9,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaModule } from './database/prisma.module';
 import { AppController } from './app.controller';
 import { envValidation } from './config/env.validation';
-import { DeploymentProfileService } from './config/deployment-profile.service';
+import { DeploymentProfileModule } from './config/deployment-profile.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { CacheModule } from './cache/cache.module';
 import { QueueModule } from './queue/queue.module';
@@ -89,6 +89,7 @@ import { InvoicesModule } from './modules/invoices/invoices.module';
     // Cron (used by ScheduleModule for cleanup tasks on VPS — on shared hosting we use cron CLI)
     ScheduleModule.forRoot(),
     // Core infrastructure
+    DeploymentProfileModule,
     PrismaModule,
     RealtimeModule,
     CacheModule,
@@ -96,7 +97,6 @@ import { InvoicesModule } from './modules/invoices/invoices.module';
     StorageModule,
     EventsModule,
     AuditModule,
-    DeploymentProfileService,
     // Feature modules
     HealthModule,
     SmsModule,

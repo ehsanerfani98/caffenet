@@ -2,7 +2,9 @@ import * as Joi from 'joi';
 
 export const envValidation = Joi.object({
   // App
-  NODE_ENV: Joi.string().valid('development', 'staging', 'production', 'test').default('development'),
+  NODE_ENV: Joi.string()
+    .valid('development', 'staging', 'production', 'test')
+    .default('development'),
   PORT: Joi.number().default(3001),
   APP_NAME: Joi.string().default('Caffenet'),
   APP_URL: Joi.string().uri().default('http://localhost:3001'),
@@ -100,7 +102,7 @@ export const envValidation = Joi.object({
   IPANEL_OTP_PATTERN_CODE: Joi.string().allow(''),
   IPANEL_OTP_PARAM_NAME: Joi.string().default('code'),
   // SMS driver selector — controls which adapter SmsModule loads
-  SMS_DRIVER: Joi.string().valid('ipanel', 'kavenegar').default('ipanel'),
+  SMS_DRIVER: Joi.string().valid('ipanel', 'kavenegar', 'console').default('ipanel'),
 
   // VAPID
   VAPID_PUBLIC_KEY: Joi.string().when('NODE_ENV', {
@@ -132,7 +134,5 @@ export const envValidation = Joi.object({
 
   // File upload
   FILE_UPLOAD_MAX_SIZE: Joi.number().default(10_485_760),
-  FILE_UPLOAD_ALLOWED_MIME: Joi.string().default(
-    'image/jpeg,image/png,image/webp,application/pdf',
-  ),
+  FILE_UPLOAD_ALLOWED_MIME: Joi.string().default('image/jpeg,image/png,image/webp,application/pdf'),
 });
