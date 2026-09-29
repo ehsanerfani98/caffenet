@@ -22,6 +22,9 @@ import { UsersModule } from './modules/users/users.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { SmsModule } from './modules/sms/sms.module';
 import { HealthModule } from './modules/health/health.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { ServicesModule } from './modules/services/services.module';
+import { FilesModule } from './modules/files/files.module';
 
 @Module({
   imports: [
@@ -95,7 +98,10 @@ import { HealthModule } from './modules/health/health.module';
     SmsModule,
     AuthModule,
     UsersModule,
-    // Additional modules (Phase 3+) added here
+    CategoriesModule,
+    ServicesModule,
+    FilesModule,
+    // Additional modules (Phase 4+) added here
   ],
   controllers: [AppController],
   providers: [
