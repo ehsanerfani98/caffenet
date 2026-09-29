@@ -1004,7 +1004,7 @@ Stakeholder feedback incorporated:
 | 0 | Architecture & Planning | ✅ Done | 100% | 2026-09-28 | 2026-09-28 |
 | 1 | Foundation (Stack/DB/API) | ✅ Done | 100% | 2026-09-28 | 2026-09-28 |
 | 2 | Auth + RBAC | ✅ Done | 100% | 2026-09-28 | 2026-09-28 |
-| 3 | Catalog + Dynamic Forms | ⏳ Pending | 0% | — | — |
+| 3 | Catalog + Dynamic Forms | 🚧 In Progress | 0% | 2026-09-28 | — |
 | 4 | Requests + Workflow | ⏳ Pending | 0% | — | — |
 | 5 | Pricing + Invoice | ⏳ Pending | 0% | — | — |
 | 6 | Wallet + Payment | ⏳ Pending | 0% | — | — |
@@ -1034,6 +1034,7 @@ Stakeholder feedback incorporated:
 | 2026-09-28 | Architect | **Folder restructure**: Moved `docker/` → `deployment/shared-hosting/` + `deployment/vps/` to make it crystal clear that shared hosting deployment does NOT use Docker anywhere. Added ADR-0007 documenting this. Updated README, deploy-shared.sh, deployment guide. Verified: shared hosting path uses NO Dockerfiles, NO docker-compose, NO container runtime — only plain Node.js + MySQL + .htaccess + cron. |
 | 2026-09-28 | Architect | Phase 2 marked as in_progress. Building auth (register, login, OTP, refresh, logout), JWT RS256, iPanel SMS, session management, RBAC guards, audit interceptor. |
 | 2026-09-28 | Architect | **Phase 2 complete**: Auth (register, login, OTP, refresh, logout, forgot/reset password), JWT (HS256 access 15min + rotating refresh 7d with reuse detection), iPanel SMS with pattern-based OTP, Session management (list/revoke/revoke-all), RBAC guards (Roles + Permissions, admin bypass), Audit module (interceptor + event listener + sensitive field redaction), Users module (profile management). 31 files committed, 16 new endpoints. argon2id for all hashing (passwords, OTP codes, refresh tokens). |
+| 2026-09-28 | Architect | Phase 3 marked as in_progress. Building Categories CRUD, Services CRUD, Dynamic Service Forms (14 field types), server-side validation engine, admin form builder. |
 
 ---
 
