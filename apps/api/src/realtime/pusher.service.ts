@@ -29,7 +29,9 @@ export class PusherService implements OnModuleInit {
     const cluster = this.config.get<string>('PUSHER_CLUSTER', 'mt1');
 
     if (!appId || !key || !secret) {
-      this.logger.warn('⚠️ Pusher credentials missing — real-time events will be no-op. Set PUSHER_APP_ID, PUSHER_KEY, PUSHER_SECRET in env.');
+      this.logger.warn(
+        '⚠️ Pusher credentials missing — real-time events will be no-op. Set PUSHER_APP_ID, PUSHER_KEY, PUSHER_SECRET in env.',
+      );
       this.enabled = false;
       return;
     }
@@ -65,7 +67,11 @@ export class PusherService implements OnModuleInit {
   /**
    * Authenticate a private/presence channel subscription request from a client.
    */
-  authenticate(socketId: string, channel: string, userData?: { user_id: string; user_info?: unknown }): string {
+  authenticate(
+    socketId: string,
+    channel: string,
+    userData?: { user_id: string; user_info?: unknown },
+  ): string {
     if (!this.enabled || !this.client) {
       throw new Error('Pusher not configured');
     }
@@ -73,9 +79,13 @@ export class PusherService implements OnModuleInit {
       if (!userData) {
         throw new Error('Presence channels require user data');
       }
-      const auth = this.client.authorizeChannel(socketId, channel, userData);
+      const auth = this.client.authorizeChannel(
+        socketId,
+        channel,
+        userData as unknown as Parameters<typeof this.client.authorizeChannel>[2],
+      );
       return typeof auth === 'string' ? auth : JSON.stringify(auth);
     }
-    return this.client.authorizeChannel(socketId, channel) as string;
+    return this.client.authorizeChannel(socketId, channel) as unknown as string;
   }
 }

@@ -35,6 +35,56 @@ export const REQUEST_CONFIG = {
   CANCEL_ALLOWED_STATUSES: ['pending', 'reviewing', 'waiting_for_customer'],
 } as const;
 
+/**
+ * Request status state machine (Phase 4.2).
+ * Key = current status, value = set of statuses it may transition to.
+ * Enforced SERVER-SIDE in RequestWorkflowService — the client may use this
+ * only for UX gating (e.g. disabling buttons), never for authorization.
+ */
+export const REQUEST_STATUS_TRANSITIONS: Record<string, readonly string[]> = {
+  pending: ['reviewing', 'cancelled', 'rejected'],
+  reviewing: [
+    'waiting_for_customer',
+    'in_progress',
+    'waiting_for_payment',
+    'rejected',
+    'cancelled',
+  ],
+  waiting_for_customer: ['in_progress', 'reviewing', 'cancelled', 'rejected'],
+  in_progress: [
+    'waiting_for_customer',
+    'waiting_for_payment',
+    'completed',
+    'rejected',
+    'cancelled',
+  ],
+  waiting_for_payment: ['paid', 'cancelled', 'rejected'],
+  paid: ['completed'],
+  completed: [], // terminal
+  cancelled: [], // terminal
+  rejected: [], // terminal
+};
+
+/** Statuses an operator/admin may set via the operator status endpoint. */
+export const REQUEST_OPERATOR_STATUSES = [
+  'reviewing',
+  'waiting_for_customer',
+  'in_progress',
+  'waiting_for_payment',
+  'completed',
+  'rejected',
+] as const;
+
+/** 'paid' is a financial status — admin-only via this endpoint (payment gateway sets it automatically in Phase 6). */
+export const REQUEST_ADMIN_ONLY_STATUSES = ['paid'] as const;
+
+/** Auto-assignment strategies (Phase 4.3.5). */
+export const AUTO_ASSIGN_STRATEGIES = ['none', 'round_robin', 'least_load'] as const;
+export const AUTO_ASSIGN_CONFIG = {
+  DEFAULT_STRATEGY: 'round_robin' as const,
+  SETTING_KEY: 'requests.auto_assign_strategy',
+} as const;
+
 export const WALLET_CONFIG = {
   MIN_DEPOSIT_AMOUNT: 1000, // 10 Toman (minor units)
   MAX_DEPOSIT_AMOUNT: 50_000_000, // 500,000 Toman

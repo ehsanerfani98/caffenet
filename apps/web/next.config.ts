@@ -1,5 +1,9 @@
 import type { NextConfig } from 'next';
 import withPWAInit from 'next-pwa';
+import createNextIntlPlugin from 'next-intl/plugin';
+
+// next-intl App Router setup — config file path relative to app root
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -12,9 +16,7 @@ const nextConfig: NextConfig = {
   i18n: undefined, // using next-intl App Router approach instead
   images: {
     formats: ['image/avif', 'image/webp'],
-    remotePatterns: [
-      { protocol: 'https', hostname: '**' },
-    ],
+    remotePatterns: [{ protocol: 'https', hostname: '**' }],
     minimumCacheTTL: 60,
   },
   async headers() {
@@ -52,4 +54,4 @@ const withPWA = withPWAInit({
   ],
 });
 
-export default withPWA(nextConfig);
+export default withNextIntl(withPWA(nextConfig));

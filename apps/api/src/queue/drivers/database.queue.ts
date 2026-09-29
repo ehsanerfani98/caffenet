@@ -36,11 +36,13 @@ export class DatabaseQueue implements IQueue {
 
     // Idempotency check — if idempotencyKey is provided, don't insert a duplicate
     if (options?.idempotencyKey) {
-      const existing = await this.prisma.job.findUnique({
+      const existing = await this.prisma.job.findFirst({
         where: { idempotencyKey: options.idempotencyKey },
       });
       if (existing) {
-        this.logger.debug(`Job already enqueued with idempotency key ${options.idempotencyKey}, returning existing`);
+        this.logger.debug(
+          `Job already enqueued with idempotency key ${options.idempotencyKey}, returning existing`,
+        );
         return existing.uuid;
       }
     }
@@ -65,14 +67,16 @@ export class DatabaseQueue implements IQueue {
     // This prevents multiple workers from picking up the same job.
     const reservedUntil = new Date(Date.now() + reservationSeconds * 1000);
 
-    const result = await this.prisma.$queryRaw<Array<{
-      id: bigint;
-      uuid: string;
-      name: string;
-      payload: unknown;
-      attempts: number;
-      maxAttempts: number;
-    }>>`
+    const result = await this.prisma.$queryRaw<
+      Array<{
+        id: bigint;
+        uuid: string;
+        name: string;
+        payload: unknown;
+        attempts: number;
+        maxAttempts: number;
+      }>
+    >`
       WITH next_job AS (
         SELECT id FROM jobs
         WHERE queue = ${queueName}
@@ -95,6 +99,7 @@ export class DatabaseQueue implements IQueue {
     }
 
     const job = result[0];
+    if (!job) return null;
     if (job.attempts > job.maxAttempts) {
       // Exceeded retries — mark failed
       await this.prisma.job.update({

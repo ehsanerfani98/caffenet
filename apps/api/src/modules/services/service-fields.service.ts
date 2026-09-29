@@ -1,6 +1,17 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { CreateServiceFieldDto, UpdateServiceFieldDto, ReorderFieldsDto } from './dto/service-field.dto';
+import { Prisma } from '@prisma/client';
+import {
+  CreateServiceFieldDto,
+  UpdateServiceFieldDto,
+  ReorderFieldsDto,
+} from './dto/service-field.dto';
 import { ServiceFieldType } from '@caffenet/shared';
 
 /**
@@ -44,9 +55,7 @@ export class ServiceFieldsService {
       where: { serviceId: BigInt(serviceId), name: dto.name },
     });
     if (existing) {
-      throw new ConflictException(
-        `فیلد با نام «${dto.name}» قبلاً برای این خدمت ثبت شده است`,
-      );
+      throw new ConflictException(`فیلد با نام «${dto.name}» قبلاً برای این خدمت ثبت شده است`);
     }
 
     const field = await this.prisma.serviceField.create({
@@ -58,10 +67,10 @@ export class ServiceFieldsService {
         placeholder: dto.placeholder,
         helpText: dto.helpText,
         required: dto.required ?? false,
-        validationRules: dto.validationRules ?? [],
+        validationRules: (dto.validationRules ?? []) as unknown as Prisma.InputJsonValue,
         defaultValue: dto.defaultValue,
         sortOrder: dto.sortOrder ?? 0,
-        options: dto.options,
+        options: dto.options as unknown as Prisma.InputJsonValue | undefined,
         active: dto.active ?? true,
       },
     });
@@ -92,10 +101,12 @@ export class ServiceFieldsService {
     if (!field) throw new NotFoundException('فیلد یافت نشد');
 
     // If changing type to option-based, ensure options are present
-    if (dto.options !== undefined && dto.options.length === 0 && this.OPTION_REQUIRED_TYPES.includes(field.type as ServiceFieldType)) {
-      throw new BadRequestException(
-        `برای نوع «${field.type}» حداقل یک گزینه لازم است`,
-      );
+    if (
+      dto.options !== undefined &&
+      dto.options.length === 0 &&
+      this.OPTION_REQUIRED_TYPES.includes(field.type as ServiceFieldType)
+    ) {
+      throw new BadRequestException(`برای نوع «${field.type}» حداقل یک گزینه لازم است`);
     }
 
     const updated = await this.prisma.serviceField.update({
@@ -105,10 +116,14 @@ export class ServiceFieldsService {
         ...(dto.placeholder !== undefined ? { placeholder: dto.placeholder } : {}),
         ...(dto.helpText !== undefined ? { helpText: dto.helpText } : {}),
         ...(dto.required !== undefined ? { required: dto.required } : {}),
-        ...(dto.validationRules !== undefined ? { validationRules: dto.validationRules } : {}),
+        ...(dto.validationRules !== undefined
+          ? { validationRules: dto.validationRules as unknown as Prisma.InputJsonValue }
+          : {}),
         ...(dto.defaultValue !== undefined ? { defaultValue: dto.defaultValue } : {}),
         ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
-        ...(dto.options !== undefined ? { options: dto.options } : {}),
+        ...(dto.options !== undefined
+          ? { options: dto.options as unknown as Prisma.InputJsonValue }
+          : {}),
         ...(dto.active !== undefined ? { active: dto.active } : {}),
       },
     });
@@ -136,7 +151,9 @@ export class ServiceFieldsService {
         where: { id: BigInt(fieldId) },
         data: { active: false },
       });
-      this.logger.log(`Field ${fieldId} deactivated (used in ${usedCount} requests) — soft-deleted by user ${userId}`);
+      this.logger.log(
+        `Field ${fieldId} deactivated (used in ${usedCount} requests) — soft-deleted by user ${userId}`,
+      );
       return { message: 'فیلد در درخواست‌های قبلی استفاده شده — به‌جای حذف، غیرفعال شد' };
     }
 
@@ -180,9 +197,7 @@ export class ServiceFieldsService {
   private validateFieldDefinition(dto: CreateServiceFieldDto) {
     if (this.OPTION_REQUIRED_TYPES.includes(dto.type)) {
       if (!dto.options || dto.options.length === 0) {
-        throw new BadRequestException(
-          `برای نوع «${dto.type}» حداقل یک گزینه لازم است`,
-        );
+        throw new BadRequestException(`برای نوع «${dto.type}» حداقل یک گزینه لازم است`);
       }
       // Validate option uniqueness
       const values = dto.options!.map((o) => o.value);

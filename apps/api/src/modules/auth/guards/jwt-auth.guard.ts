@@ -1,7 +1,7 @@
-import { ExecutionContext, Injectable } from '@nestjs/common';
+import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { IS_PUBLIC_KEY } from '../../common/decorators/public.decorator';
+import { IS_PUBLIC_KEY } from '../../../common/decorators/public.decorator';
 
 /**
  * JWT Auth Guard — protects routes requiring authentication.
@@ -30,9 +30,16 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 
-  handleRequest(err: unknown, user: unknown) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handleRequest(
+    err: unknown,
+    user: unknown,
+    info: unknown,
+    context: unknown,
+    status?: unknown,
+  ): any {
     if (err || !user) {
-      throw err || new (require('@nestjs/common').UnauthorizedException)('احراز هویت ناموفق بود');
+      throw err || new UnauthorizedException('احراز هویت ناموفق بود');
     }
     return user;
   }

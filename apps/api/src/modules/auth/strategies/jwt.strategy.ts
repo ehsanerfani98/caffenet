@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from '../dto/auth.dto';
-import { PrismaService } from '../../database/prisma.service';
+import { PrismaService } from '../../../database/prisma.service';
 
 /**
  * JWT strategy for authenticating users via access tokens.
@@ -63,13 +63,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
 
     // Flatten roles & permissions
-    const roles = user.roles.map((ur) => ur.role.name);
-    const permissions = Array.from(
-      new Set(
-        user.roles.flatMap((ur) =>
-          ur.role.permissions.map((rp) => rp.permission.slug),
-        ),
-      ),
+    const roles: string[] = user.roles.map((ur) => ur.role.name);
+    const permissions: string[] = Array.from(
+      new Set(user.roles.flatMap((ur) => ur.role.permissions.map((rp) => rp.permission.slug))),
     );
 
     return {

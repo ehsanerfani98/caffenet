@@ -25,6 +25,7 @@ import { HealthModule } from './modules/health/health.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { ServicesModule } from './modules/services/services.module';
 import { FilesModule } from './modules/files/files.module';
+import { RequestsModule } from './modules/requests/requests.module';
 
 @Module({
   imports: [
@@ -101,7 +102,8 @@ import { FilesModule } from './modules/files/files.module';
     CategoriesModule,
     ServicesModule,
     FilesModule,
-    // Additional modules (Phase 4+) added here
+    RequestsModule,
+    // Additional modules (Phase 5+) added here
   ],
   controllers: [AppController],
   providers: [

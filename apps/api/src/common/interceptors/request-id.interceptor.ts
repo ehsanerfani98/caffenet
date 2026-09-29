@@ -33,7 +33,7 @@ export class RequestIdInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       map((data) => ({
-        success: true,
+        success: true as const,
         data,
         meta: {
           requestId,

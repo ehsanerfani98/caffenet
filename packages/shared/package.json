@@ -5,7 +5,9 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
@@ -14,6 +16,7 @@
     "clean": "rm -rf dist"
   },
   "devDependencies": {
+    "@caffenet/config": "workspace:*",
     "@types/node": "^20.16.0",
     "typescript": "^5.6.2"
   }

@@ -1,0 +1,33 @@
+import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
+import { ServicesModule } from '../services/services.module';
+import { FilesModule } from '../files/files.module';
+import { RequestsService } from './requests.service';
+import { RequestWorkflowService } from './request-workflow.service';
+import { RequestAssignmentService } from './request-assignment.service';
+import { RequestHistoryService } from './request-history.service';
+import { CustomerRequestsController } from './customer-requests.controller';
+import { OperatorRequestsController } from './operator-requests.controller';
+import { AdminRequestsController } from './admin-requests.controller';
+
+/**
+ * Requests module — Phase 4 (Request Management + Status Workflow).
+ *
+ * Dependencies:
+ *  - AuthModule      → JwtAuthGuard + strategy
+ *  - ServicesModule  → DynamicFormValidator (server-side form validation)
+ *  - FilesModule     → attachment signed URLs
+ * RealtimeModule / EventsModule / AuditModule are @Global — no import needed.
+ */
+@Module({
+  imports: [AuthModule, ServicesModule, FilesModule],
+  controllers: [CustomerRequestsController, OperatorRequestsController, AdminRequestsController],
+  providers: [
+    RequestsService,
+    RequestWorkflowService,
+    RequestAssignmentService,
+    RequestHistoryService,
+  ],
+  exports: [RequestsService, RequestWorkflowService],
+})
+export class RequestsModule {}

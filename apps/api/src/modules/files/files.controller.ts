@@ -9,7 +9,13 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiConsumes, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import {
+  ApiConsumes,
+  ApiOperation,
+  ApiProperty,
+  ApiPropertyOptional,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request } from 'express';
 import { ApiBody } from '@nestjs/swagger';
 import { IsIn, IsOptional, MaxLength } from 'class-validator';

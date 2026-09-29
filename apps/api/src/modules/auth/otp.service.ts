@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, TooManyRequestsException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Inject } from '@nestjs/common';
 import argon2 from 'argon2';
@@ -95,7 +95,9 @@ export class OtpService {
       };
     }
 
-    this.logger.log(`OTP sent to user ${userId} (type: ${type}) — expires at ${expiresAt.toISOString()}`);
+    this.logger.log(
+      `OTP sent to user ${userId} (type: ${type}) — expires at ${expiresAt.toISOString()}`,
+    );
 
     return {
       success: true,
@@ -134,7 +136,10 @@ export class OtpService {
         where: { id: otp.id },
         data: { status: OtpStatus.EXPIRED },
       });
-      throw new TooManyRequestsException('تعداد تلاش‌های ناموفق بیش از حد مجاز است — ۱۵ دقیقه بعد دوباره تلاش کنید');
+      throw new HttpException(
+        'تعداد تلاش‌های ناموفق بیش از حد مجاز است — ۱۵ دقیقه بعد دوباره تلاش کنید',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
 
     // Increment attempts (atomic — race-condition safe)
@@ -192,10 +197,16 @@ export class OtpService {
     ]);
 
     if (hourCount >= AUTH_CONFIG.OTP_RESEND_RATE_LIMIT_PER_HOUR) {
-      throw new TooManyRequestsException('تعداد درخواست‌های کد تأیید در یک ساعت اخیر بیش از حد مجاز است (۳ مرتبه)');
+      throw new HttpException(
+        'تعداد درخواست‌های کد تأیید در یک ساعت اخیر بیش از حد مجاز است (۳ مرتبه)',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
     if (dayCount >= AUTH_CONFIG.OTP_RESEND_RATE_LIMIT_PER_DAY) {
-      throw new TooManyRequestsException('تعداد درخواست‌های کد تأیید در ۲۴ ساعت اخیر بیش از حد مجاز است (۵ مرتبه)');
+      throw new HttpException(
+        'تعداد درخواست‌های کد تأیید در ۲۴ ساعت اخیر بیش از حد مجاز است (۵ مرتبه)',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
   }
 

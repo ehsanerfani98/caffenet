@@ -2,7 +2,10 @@
  * Tracking code generator: CF-YYYY-NNNNNN
  * e.g. CF-2026-001234
  */
-export function generateTrackingCode(sequence: number, year: number = new Date().getFullYear()): string {
+export function generateTrackingCode(
+  sequence: number,
+  year: number = new Date().getFullYear(),
+): string {
   const padded = String(sequence).padStart(6, '0');
   return `CF-${year}-${padded}`;
 }
@@ -10,7 +13,10 @@ export function generateTrackingCode(sequence: number, year: number = new Date()
 /**
  * Invoice number generator: INV-YYYY-NNNNNN
  */
-export function generateInvoiceNumber(sequence: number, year: number = new Date().getFullYear()): string {
+export function generateInvoiceNumber(
+  sequence: number,
+  year: number = new Date().getFullYear(),
+): string {
   const padded = String(sequence).padStart(6, '0');
   return `INV-${year}-${padded}`;
 }
@@ -47,6 +53,6 @@ export function maskPhone(phone: string): string {
  */
 export function maskEmail(email: string): string {
   const [user, domain] = email.split('@');
-  if (!domain || user.length < 2) return email;
+  if (!domain || !user || user.length < 2) return email;
   return `${user[0]}${'*'.repeat(Math.min(5, user.length - 1))}@${domain}`;
 }

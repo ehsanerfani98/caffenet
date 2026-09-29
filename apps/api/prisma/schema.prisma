@@ -60,8 +60,12 @@ model User {
   // Audit & files
   auditLogs                AuditLog[]
   uploadedFiles            FileUpload[]
+  requestAttachments       RequestAttachment[]
+  // Payments & invoices (Phase 6/5)
+  payments                 Payment[]
+  invoices                 Invoice[]
   // Contact
-  preferredContactMethod   ContactMethod?     @relation("user_preferred_contact_method")
+  preferredContactMethod   ContactMethod?     @relation("user_preferred_contact_method", fields: [preferredContactMethodId], references: [id])
 
   @@index([phone])
   @@index([email])
@@ -595,6 +599,7 @@ model Wallet {
 
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions WalletTransaction[]
+  payments    Payment[]
 
   @@map("wallets")
 }
@@ -705,6 +710,7 @@ model Invoice {
 
   customer        User      @relation(fields: [customerId], references: [id])
   request         Request   @relation(fields: [requestId], references: [id])
+  discountCode    DiscountCode? @relation(fields: [discountCodeId], references: [id])
   items           InvoiceItem[]
 
   @@index([customerId, createdAt])
@@ -796,6 +802,7 @@ model FileUpload {
   // Lifecycle
   accessedAt      DateTime  @map("accessed_at") @default(now())
   expiresAt       DateTime? @map("expires_at")
+  deletedAt       DateTime? @map("deleted_at")
   createdAt       DateTime  @default(now()) @map("created_at")
 
   uploader        User      @relation(fields: [uploadedById], references: [id])

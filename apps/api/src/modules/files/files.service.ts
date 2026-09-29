@@ -104,7 +104,8 @@ export class FilesService {
         mimeType: existing.mimeType,
         size: existing.size.toString(),
         path: existing.path,
-        url: existing.visibility === 'public' ? this.storage.getPublicUrl(existing.path) : undefined,
+        url:
+          existing.visibility === 'public' ? this.storage.getPublicUrl(existing.path) : undefined,
         visibility: existing.visibility as 'public' | 'private',
         sha256Hash: existing.sha256Hash!,
       };
@@ -151,7 +152,11 @@ export class FilesService {
   /**
    * Get a signed URL for downloading a private file (after authz check).
    */
-  async getSignedUrl(fileId: string, userId: string, expiresInSeconds = 300): Promise<{ url: string }> {
+  async getSignedUrl(
+    fileId: string,
+    userId: string,
+    expiresInSeconds = 300,
+  ): Promise<{ url: string }> {
     const file = await this.prisma.fileUpload.findFirst({
       where: { id: BigInt(fileId) },
     });
@@ -190,17 +195,15 @@ export class FilesService {
   // ==================== HELPERS ====================
 
   private isAllowedMime(mime: string): boolean {
-    const allowed = (
-      this.config.get<string>('FILE_UPLOAD_ALLOWED_MIME', '') ?? ''
-    )
+    const allowed = (this.config.get<string>('FILE_UPLOAD_ALLOWED_MIME', '') ?? '')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
     if (allowed.length === 0) {
       // Fallback to defaults
-      return FILE_UPLOAD_CONFIG.ALLOWED_MIME_TYPES.includes(mime);
+      return (FILE_UPLOAD_CONFIG.ALLOWED_MIME_TYPES as readonly string[]).includes(mime);
     }
-    return allowed.includes(mime);
+    return (allowed as string[]).includes(mime);
   }
 
   private sanitizeFilename(name: string): string {
@@ -218,9 +221,22 @@ export class FilesService {
     const ext = name.substring(idx).toLowerCase();
     // Allowlist common extensions
     const allowedExtensions = [
-      '.jpg', '.jpeg', '.png', '.webp', '.gif',
-      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-      '.txt', '.csv', '.zip', '.rar',
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.webp',
+      '.gif',
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
+      '.txt',
+      '.csv',
+      '.zip',
+      '.rar',
     ];
     return allowedExtensions.includes(ext) ? ext : '';
   }

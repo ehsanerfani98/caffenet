@@ -1,6 +1,7 @@
 {
   "extends": "@caffenet/config/tsconfig/nestjs.json",
   "compilerOptions": {
+    "composite": false,
     "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": "./",

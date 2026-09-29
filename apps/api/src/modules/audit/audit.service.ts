@@ -26,9 +26,17 @@ export interface AuditLogEntry {
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
   private static readonly SENSITIVE_KEYS = [
-    'password', 'passwordHash', 'currentPassword', 'newPassword',
-    'secret', 'token', 'refreshToken', 'accessToken',
-    'apiKey', 'privateKey', 'cookie',
+    'password',
+    'passwordHash',
+    'currentPassword',
+    'newPassword',
+    'secret',
+    'token',
+    'refreshToken',
+    'accessToken',
+    'apiKey',
+    'privateKey',
+    'cookie',
   ];
 
   constructor(private readonly prisma: PrismaService) {}
@@ -45,17 +53,20 @@ export class AuditService {
           action: entry.action,
           entity: entry.entity,
           entityId: entry.entityId,
-          oldData: entry.oldData ? this.redactSecrets(entry.oldData) : undefined,
-          newData: entry.newData ? this.redactSecrets(entry.newData) : undefined,
+          oldData: entry.oldData ? (this.redactSecrets(entry.oldData) as object) : undefined,
+          newData: entry.newData ? (this.redactSecrets(entry.newData) as object) : undefined,
           ip: entry.ip,
           userAgent: entry.userAgent,
           requestId: entry.requestId,
-          metadata: entry.metadata ?? undefined,
+          metadata: (entry.metadata ?? undefined) as object | undefined,
         },
       });
     } catch (err) {
       // Audit failure should NEVER break the user-facing operation
-      this.logger.error(`Failed to write audit log: ${(err as Error).message}`, err instanceof Error ? err.stack : undefined);
+      this.logger.error(
+        `Failed to write audit log: ${(err as Error).message}`,
+        err instanceof Error ? err.stack : undefined,
+      );
     }
   }
 
@@ -118,7 +129,9 @@ export class AuditService {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       const lowerKey = key.toLowerCase();
-      const isSensitive = AuditService.SENSITIVE_KEYS.some((s) => lowerKey.includes(s.toLowerCase()));
+      const isSensitive = AuditService.SENSITIVE_KEYS.some((s) =>
+        lowerKey.includes(s.toLowerCase()),
+      );
       if (isSensitive) {
         result[key] = '[REDACTED]';
       } else if (value && typeof value === 'object' && !Array.isArray(value)) {

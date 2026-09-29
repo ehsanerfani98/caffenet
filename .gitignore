@@ -62,3 +62,8 @@ packages/api/prisma/*.db-journal
 *.pid
 *.seed
 *.pid.lock
+
+# PWA generated service worker (build artifact)
+apps/web/public/sw.js
+apps/web/public/workbox-*.js
+apps/web/public/fallback-*.js
