@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authApi } from '@/lib/api/auth';
 import { useAuthStore, persistTokenMirror } from '@/lib/stores/auth-store';
+import { destinationFor } from '@/lib/role-home';
 import { toPersianDigits } from '@/lib/format';
 
 /**
@@ -62,7 +63,8 @@ function VerifyOtpForm() {
       });
       setUser(result.user);
       persistTokenMirror(result.accessToken);
-      router.replace(next);
+      // Phase 8/9 — role-aware landing
+      router.replace(destinationFor(result.user?.roles, next));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'کد وارد شده نامعتبر است');
       setDigits(Array(6).fill(''));

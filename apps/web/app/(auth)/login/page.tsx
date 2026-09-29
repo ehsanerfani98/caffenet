@@ -7,6 +7,8 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PublicGuard } from '@/components/common/guards';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { destinationFor } from '@/lib/role-home';
+import { useAuthStore } from '@/lib/stores/auth-store';
 
 /**
  * Login page (7.3.1) — phone/email + password.
@@ -31,7 +33,9 @@ function LoginForm() {
         `/verify-otp?phone=${encodeURIComponent(identifier.trim())}&type=login&next=${encodeURIComponent(next)}`,
       );
     } else {
-      router.replace(next);
+      // Phase 8/9 — role-aware landing: operator/admin go to their dashboards
+      const roles = useAuthStore.getState().user?.roles;
+      router.replace(destinationFor(roles, search.get('next')));
     }
   };
 

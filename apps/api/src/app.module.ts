@@ -31,6 +31,7 @@ import { RequestsModule } from './modules/requests/requests.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { DiscountsModule } from './modules/discounts/discounts.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -114,6 +115,7 @@ import { InvoicesModule } from './modules/invoices/invoices.module';
     WalletModule,
     PaymentsModule,
     // Additional modules (Phase 6+) added here
+    AdminModule, // Phase 8/9 — operator & admin dashboards' backend
   ],
   controllers: [AppController],
   providers: [

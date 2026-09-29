@@ -58,3 +58,36 @@ export function PublicGuard({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
+
+/**
+ * Role guard (Phase 8/9) — restricts a layout subtree to the given roles.
+ * Must be nested INSIDE a `PrivateGuard` (assumes auth state is hydrated).
+ * Operators/admins also pass customer allowlists when `allow` includes their role.
+ */
+export function RoleGuard({ allow, children }: { allow: string[]; children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { hydrated, accessToken, user } = useAuthStore();
+  const roles = user?.roles ?? [];
+
+  const authorized = !!accessToken && roles.some((r) => allow.includes(r));
+
+  useEffect(() => {
+    if (hydrated && accessToken && !authorized) {
+      router.replace('/home');
+    }
+  }, [hydrated, accessToken, authorized, router, pathname]);
+
+  if (!hydrated || !accessToken) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-gray-50">
+        <div className="border-brand-200 border-t-brand-600 h-10 w-10 animate-spin rounded-full border-4" />
+        <p className="mt-3 text-sm text-gray-400">در حال بررسی دسترسی…</p>
+      </div>
+    );
+  }
+
+  if (!authorized) return null;
+
+  return <>{children}</>;
+}

@@ -47,6 +47,60 @@ export class RequestAssignmentService {
   ) {}
 
   /**
+   * Phase 8.2.2 — "Take next from queue": pick the oldest unassigned request
+   * (pending first, then reviewing) and self-assign it to the operator.
+   * Throws NotFoundException when the queue is empty.
+   */
+  async takeNextForOperator(
+    operatorId: string,
+    ctx?: { ip?: string; userAgent?: string },
+  ): Promise<AssignmentResult & { trackingCode: string; serviceName: string }> {
+    const candidate =
+      (await this.prisma.request.findFirst({
+        where: { assignedOperatorId: null, status: 'pending' },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      })) ??
+      (await this.prisma.request.findFirst({
+        where: { assignedOperatorId: null, status: 'reviewing' },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      }));
+
+    if (!candidate) {
+      throw new NotFoundException('درخواستی در صف موجود نیست');
+    }
+
+    const result = await this.assign(
+      candidate.id.toString(),
+      { note: 'برداشتن از صف (تکمیل خودکار داشبورد)' },
+      operatorId,
+      ['operator'],
+    );
+
+    const request = await this.prisma.request.findUnique({
+      where: { id: candidate.id },
+      select: { trackingCode: true, service: { select: { name: true } } },
+    });
+
+    this.audit.log({
+      userId: operatorId,
+      action: AuditAction.ASSIGN,
+      entity: 'request',
+      entityId: result.requestId,
+      newData: { takeNext: true, operatorId },
+      ip: ctx?.ip,
+      userAgent: ctx?.userAgent,
+    });
+
+    return {
+      ...result,
+      trackingCode: request?.trackingCode ?? '',
+      serviceName: request?.service.name ?? '',
+    };
+  }
+
+  /**
    * Assign an operator to a request.
    *  - operator WITHOUT operatorId → self-assign
    *  - operator WITH operatorId≠self → forbidden (use admin route)

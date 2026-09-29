@@ -12,6 +12,7 @@ import { RequestHistoryService } from './request-history.service';
 import { RequestPaymentService } from './request-payment.service';
 import { CustomerRequestsController } from './customer-requests.controller';
 import { OperatorRequestsController } from './operator-requests.controller';
+import { OperatorDashboardController } from './operator-dashboard.controller';
 import { AdminRequestsController } from './admin-requests.controller';
 
 /**
@@ -26,7 +27,12 @@ import { AdminRequestsController } from './admin-requests.controller';
  */
 @Module({
   imports: [AuthModule, ServicesModule, FilesModule, InvoicesModule, WalletModule, PaymentsModule],
-  controllers: [CustomerRequestsController, OperatorRequestsController, AdminRequestsController],
+  controllers: [
+    CustomerRequestsController,
+    OperatorRequestsController,
+    OperatorDashboardController,
+    AdminRequestsController,
+  ],
   providers: [
     RequestsService,
     RequestWorkflowService,
