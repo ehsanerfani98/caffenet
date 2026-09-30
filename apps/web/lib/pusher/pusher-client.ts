@@ -3,12 +3,17 @@
 import Pusher, { type Channel } from 'pusher-js';
 import { PUSHER_CONFIG } from '@caffenet/shared';
 
-const PUSHER_KEY = process.env.NEXT_PUBLIC_PUSHER_KEY;
-const PUSHER_CLUSTER = process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'mt1';
 const AUTH_ENDPOINT =
   process.env.NEXT_PUBLIC_PUSHER_AUTH_ENDPOINT ||
   `${process.env.NEXT_PUBLIC_API_URL}/broadcasting/auth`;
 
+// Public credentials are DB-managed (Admin → Settings → Pusher) and served by
+// `GET /settings/public`. Env (NEXT_PUBLIC_PUSHER_*) is the zero-config
+// fallback. Module-level so a config fetch can upgrade them before client
+// creation — the pusher key is PUBLIC by design.
+let PUSHER_KEY = process.env.NEXT_PUBLIC_PUSHER_KEY;
+let PUSHER_CLUSTER = process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'mt1';
+let publicConfigLoaded: Promise<void> | null = null;
 let client: Pusher | null = null;
 
 function currentAccessToken(): string {
@@ -18,19 +23,55 @@ function currentAccessToken(): string {
 }
 
 /**
- * Pusher-js singleton (Phase 10.1.8).
+ * Resolve PUBLIC Pusher credentials from the backend's public settings
+ * (`GET /api/v1/settings/public`) once per session. Falls back to the
+ * NEXT_PUBLIC_* env vars when the request fails.
+ */
+export function preloadPusherConfig(): Promise<void> {
+  if (publicConfigLoaded) return publicConfigLoaded;
+  publicConfigLoaded = (async () => {
+    try {
+      const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
+      if (!apiBase) return;
+      const res = await fetch(`${apiBase}/settings/public`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const body = (await res.json()) as {
+        pusher?: { enabled?: boolean; key?: string; cluster?: string };
+      };
+      if (body.pusher?.key) {
+        PUSHER_KEY = body.pusher.key;
+        PUSHER_CLUSTER = body.pusher.cluster || PUSHER_CLUSTER;
+      } else {
+        PUSHER_KEY = undefined; // disabled or unset server-side
+      }
+    } catch {
+      // offline / API down → env fallback stays in effect
+    }
+  })();
+  return publicConfigLoaded;
+}
+
+/**
+ * Pusher-js singleton (Phase 10.1.8 / Phase 12 pre-req).
  *
+ * - Credentials resolved from DB settings via preloadPusherConfig().
  * - Custom authorizer sends the CURRENT bearer token on every (re)auth, so
  *   token refreshes never break channel subscriptions.
  * - forceTLS + only ws/wss transports (10.1.10 TLS verification).
  * - Auto (re)connect is built into pusher-js; expose connection state via
  *   bindConnectionState for UI indicators (10.5.8 / 10.5.9).
+ *
+ * Prefer `ensurePusherClient()` in async contexts; `getPusherClient()` stays
+ * sync for existing call sites.
  */
+export async function ensurePusherClient(): Promise<Pusher | null> {
+  await preloadPusherConfig();
+  return getPusherClient();
+}
+
 export function getPusherClient(): Pusher | null {
-  if (!PUSHER_KEY) {
-    console.warn('Pusher key missing — real-time disabled');
-    return null;
-  }
+  if (typeof window === 'undefined') return null;
+  if (!PUSHER_KEY) return null;
   if (!client) {
     client = new Pusher(PUSHER_KEY, {
       cluster: PUSHER_CLUSTER,
@@ -119,7 +160,6 @@ export function unsubscribeRequestChannels(requestId: string | number): void {
   pusher.unsubscribe(PUSHER_CONFIG.PRESENCE_REQUEST_CHANNEL(requestId));
 }
 
-/** Trigger a typing client-event on the presence channel (throttle upstream). */
 export function emitTyping(
   requestId: string | number,
   from: { id: string; name?: string | null },

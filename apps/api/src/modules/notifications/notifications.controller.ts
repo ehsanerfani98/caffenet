@@ -81,8 +81,8 @@ export class NotificationsController {
 
   @Get('vapid-public-key')
   @ApiOperation({ summary: 'کلید عمومی VAPID برای pushManager.subscribe' })
-  vapidPublicKey() {
-    return { publicKey: this.push.vapidPublicKey || null, enabled: this.push.isEnabled };
+  async vapidPublicKey() {
+    return await this.push.getStatus();
   }
 
   @Post('read-all')

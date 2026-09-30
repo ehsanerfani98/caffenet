@@ -36,9 +36,10 @@ export class PushController {
   @Get('status')
   @ApiOperation({ summary: 'وضعیت Web Push برای این مرورگر/کاربر' })
   async status(@CurrentUser() user: Actor) {
+    const pushStatus = await this.push.getStatus();
     return {
-      enabled: this.push.isEnabled,
-      publicKey: this.push.vapidPublicKey || null,
+      enabled: pushStatus.enabled,
+      publicKey: pushStatus.publicKey,
       subscriptions: await this.prisma.pushSubscription.count({
         where: { userId: BigInt(user.id), expiredAt: null },
       }),
@@ -49,7 +50,7 @@ export class PushController {
   @HttpCode(200)
   @ApiOperation({ summary: 'ثبت اشتراک Web Push (upsert بر اساس endpoint)' })
   async subscribe(@CurrentUser() user: Actor, @Body() dto: PushSubscribeDto) {
-    if (!this.push.isEnabled) {
+    if (!(await this.push.getStatus()).enabled) {
       throw new ForbiddenException('سرویس Web Push در سرور فعال نیست');
     }
     const { p256dh, auth } = dto.keys ?? {};

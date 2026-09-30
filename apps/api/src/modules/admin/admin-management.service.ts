@@ -11,6 +11,8 @@ import argon2 from 'argon2';
 import { AuditService } from '../audit/audit.service';
 import { WalletService } from '../wallet/wallet.service';
 import { toMajor } from '../../common/utils/money';
+import { SettingsService } from '../../config/settings.service';
+import { EventBusService } from '../../events/event-bus.service';
 
 /**
  * AdminManagementService (Phase 9.3–9.9, 9.12) — user/operator/role management,
@@ -77,6 +79,8 @@ export class AdminManagementService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly wallet: WalletService,
+    private readonly settings: SettingsService,
+    private readonly events: EventBusService,
   ) {}
 
   // ==========================================================================
@@ -660,11 +664,15 @@ export class AdminManagementService {
   private readonly SETTING_KEYS = {
     general: [
       'system.name',
+      'system.name_fa',
+      'system.description',
       'system.logo_url',
       'system.currency',
       'system.timezone',
       'system.contact_phone',
       'system.contact_email',
+      'app.url',
+      'app.frontend_url',
     ],
     notifications: [
       'notifications.sms_enabled',
@@ -676,13 +684,40 @@ export class AdminManagementService {
       'payments.zibal_enabled',
       'payments.default_gateway',
       'payments.zarinpal_merchant_id',
-      'payments.zibal_api_key',
+      'payments.zarinpal_sandbox',
+      'payments.zibal_merchant_id',
+      'payments.zibal_sandbox',
     ],
     pusher: ['pusher.enabled', 'pusher.cluster', 'pusher.app_id', 'pusher.key', 'pusher.secret'],
-    pwa: ['pwa.theme_color', 'pwa.icon_192', 'pwa.icon_512', 'pwa.app_name'],
+    push: ['push.enabled', 'push.vapid_public_key', 'push.vapid_private_key', 'push.vapid_subject'],
+    mail: [
+      'mail.enabled',
+      'mail.driver',
+      'mail.host',
+      'mail.port',
+      'mail.user',
+      'mail.pass',
+      'mail.from',
+    ],
+    pwa: [
+      'pwa.app_name',
+      'pwa.short_name',
+      'pwa.description',
+      'pwa.theme_color',
+      'pwa.background_color',
+      'pwa.icon_192',
+      'pwa.icon_512',
+    ],
     files: ['files.max_size_mb', 'files.allowed_extensions'],
     requests: ['requests.auto_assign_strategy', 'requests.auto_approve'],
-    sms: ['sms.provider', 'sms.ipanel_api_key', 'sms.sender_number'],
+    sms: [
+      'sms.provider',
+      'sms.ipanel_api_key',
+      'sms.ipanel_sender',
+      'sms.ipanel_otp_pattern_code',
+      'sms.ipanel_otp_param_name',
+      'sms.sender_number',
+    ],
   } as const;
 
   async listSettings() {
@@ -718,7 +753,7 @@ export class AdminManagementService {
         throw new BadRequestException(`کلید تنظیم نامعتبر: ${e.key}`);
     }
     for (const e of entries) {
-      const isSecret = /api_key|secret|merchant_id/.test(e.key);
+      const isSecret = /api_key|secret|merchant_id|private_key|\.pass/.test(e.key);
       await this.prisma.systemSetting.upsert({
         where: { key: e.key },
         create: {
@@ -738,6 +773,10 @@ export class AdminManagementService {
         },
       });
     }
+    // Runtime services read settings from this table — flush the in-process
+    // cache and notify listeners (Pusher/Push clients re-init lazily).
+    this.settings.invalidate();
+    await this.events.emit('settings.changed', { keys: entries.map((e) => e.key) });
     await this.audit.log({
       userId: actor.id,
       action: 'setting_change',

@@ -1,9 +1,12 @@
 /**
- * PushService (Phase 11.4) — Web Push delivery via the `web-push` library.
+ * PushService (Phase 11.4 / Phase 12 pre-req) — Web Push delivery via the
+ * `web-push` library.
  *
  * Responsibilities:
- *  - Configure VAPID keys once at boot (no-op + disabled state when absent,
- *    mirroring PusherService behaviour for dev environments).
+ *  - VAPID credentials resolve from DATABASE settings (Admin → Settings → Push)
+ *    with env fallback; the library is re-configured automatically whenever an
+ *    admin changes the keys (fingerprint comparison, no restart needed).
+ *  - `push.enabled` system-level master switch (on top of per-user prefs).
  *  - Deliver a push payload to a single subscription.
  *  - Map delivery failures to lifecycle outcomes:
  *      404 / 410 Gone  → subscription is dead, caller must delete it
@@ -11,9 +14,9 @@
  *      other           → transient failure, caller may retry via queue
  */
 
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger } from '@nestjs/common';
 import * as webpush from 'web-push';
+import { SettingsService } from '../../config/settings.service';
 
 export interface PushSubscriptionKeys {
   endpoint: string;
@@ -31,51 +34,62 @@ export interface PushPayload {
 export type PushDeliveryOutcome = 'sent' | 'gone' | 'failed' | 'disabled';
 
 @Injectable()
-export class PushService implements OnModuleInit {
+export class PushService {
   private readonly logger = new Logger(PushService.name);
   private publicKey = '';
+  private fingerprint = '';
   private configured = false;
+  private systemEnabled = true;
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly settings: SettingsService) {}
 
-  onModuleInit(): void {
-    const publicKey = this.config.get<string>('VAPID_PUBLIC_KEY') ?? '';
-    const privateKey = this.config.get<string>('VAPID_PRIVATE_KEY') ?? '';
-    const subject =
-      this.config.get<string>('VAPID_SUBJECT') ||
-      this.config.get<string>('APP_URL') ||
-      'mailto:support@caffenet.local';
+  /**
+   * Ensure web-push is configured for the CURRENT DB settings. Cheap after
+   * the first call (fingerprint short-circuit).
+   */
+  private async ensureConfigured(): Promise<boolean> {
+    const cfg = await this.settings.getVapidConfig();
+    const fingerprint = `${cfg.publicKey}|${cfg.privateKey}|${cfg.subject}`;
 
-    if (!publicKey || !privateKey) {
-      this.logger.warn(
-        'VAPID keys missing — Web Push disabled (generate with: npx web-push generate-vapid-keys)',
-      );
-      return;
+    if (this.fingerprint !== fingerprint) {
+      this.fingerprint = fingerprint;
+      this.configured = false;
+      if (!cfg.publicKey || !cfg.privateKey) {
+        this.logger.warn(
+          'VAPID keys missing — Web Push disabled. Configure in Admin → Settings → Push (or generate with: npx web-push generate-vapid-keys)',
+        );
+      } else {
+        try {
+          webpush.setVapidDetails(cfg.subject, cfg.publicKey, cfg.privateKey);
+          this.publicKey = cfg.publicKey;
+          this.configured = true;
+          this.logger.log('Web Push configured (VAPID ready — DB settings)');
+        } catch (err) {
+          // Invalid keys must never crash the whole API — disable push instead
+          this.logger.error(
+            `VAPID keys invalid — Web Push disabled: ${err instanceof Error ? err.message : err}`,
+          );
+        }
+      }
     }
-
-    try {
-      webpush.setVapidDetails(subject, publicKey, privateKey);
-    } catch (err) {
-      // Invalid keys must never crash the whole API — disable push instead
-      this.logger.error(
-        `VAPID keys invalid — Web Push disabled: ${err instanceof Error ? err.message : err}`,
-      );
-      return;
-    }
-
-    this.publicKey = publicKey;
-    this.configured = true;
-    this.logger.log('Web Push configured (VAPID ready)');
+    return this.configured;
   }
 
-  /** Whether push delivery is possible in this environment. */
+  /** Whether push delivery is possible in this environment AND system-enabled. */
   get isEnabled(): boolean {
-    return this.configured;
+    return this.configured && this.systemEnabled;
   }
 
   /** VAPID public key exposed to browsers for pushManager.subscribe(). */
   get vapidPublicKey(): string {
     return this.publicKey;
+  }
+
+  /** Async variant used by HTTP endpoints — resolves DB settings first. */
+  async getStatus(): Promise<{ enabled: boolean; publicKey: string | null }> {
+    const ok = await this.ensureConfigured();
+    this.systemEnabled = (await this.settings.getBoolean('push.enabled', true)) ?? true;
+    return { enabled: ok && this.systemEnabled, publicKey: ok ? this.publicKey : null };
   }
 
   /**
@@ -86,7 +100,12 @@ export class PushService implements OnModuleInit {
     sub: PushSubscriptionKeys,
     payload: PushPayload,
   ): Promise<PushDeliveryOutcome> {
-    if (!this.configured) return 'disabled';
+    const ok = await this.ensureConfigured();
+    if (!ok) return 'disabled';
+
+    // System-level master switch (per-user preference is checked upstream)
+    this.systemEnabled = (await this.settings.getBoolean('push.enabled', true)) ?? true;
+    if (!this.systemEnabled) return 'disabled';
 
     try {
       await webpush.sendNotification(

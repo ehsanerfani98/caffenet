@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Axios } from 'axios';
 import {
   BaseGatewayAdapter,
@@ -7,6 +6,7 @@ import {
   GatewayPaymentRequest,
   GatewayVerifyResult,
 } from '../payment-gateway.interface';
+import { SettingsService } from '../../../config/settings.service';
 
 /**
  * Zibal gateway adapter (Phase 6.4.4) — v1 REST API.
@@ -18,28 +18,28 @@ import {
  *
  * Amount unit: Rials — same as Caffenet minor units.
  *
- * Config: ZIBAL_MERCHANT_ID ('zibal' = sandbox), ZIBAL_SANDBOX (default true).
+ * Config (Phase 12 pre-req — settings from DB): merchant id / sandbox read at
+ * REQUEST time from Admin → Settings → درگاه پرداخت, ZIBAL_* env fallback.
+ * ('zibal' merchant = sandbox mode.)
  */
 @Injectable()
 export class ZibalGateway extends BaseGatewayAdapter {
   readonly name = 'zibal';
   private readonly http = new Axios({ headers: { 'Content-Type': 'application/json' } });
-  private readonly merchantId: string;
-  private readonly sandbox: boolean;
 
-  constructor(config: ConfigService) {
+  constructor(private readonly settings: SettingsService) {
     super();
-    this.merchantId = config.get<string>('ZIBAL_MERCHANT_ID', 'zibal')!;
-    this.sandbox = config.get<boolean>('ZIBAL_SANDBOX', true);
   }
 
-  private get baseUrl(): string {
-    return this.sandbox ? 'https://sandbox.gateway.zibal.ir' : 'https://gateway.zibal.ir';
+  private static baseUrlFor(sandbox: boolean): string {
+    return sandbox ? 'https://sandbox.gateway.zibal.ir' : 'https://gateway.zibal.ir';
   }
 
   async createPayment(req: GatewayPaymentRequest): Promise<GatewayCreateResult> {
+    const { merchantId, sandbox } = await this.settings.getZibalConfig();
+    const baseUrl = ZibalGateway.baseUrlFor(sandbox);
     const payload = {
-      merchant: this.sandbox ? 'zibal' : this.merchantId,
+      merchant: sandbox ? 'zibal' : merchantId,
       amount: Number(req.amountMinor),
       callbackUrl: req.callbackUrl,
       orderId: req.orderId,
@@ -47,16 +47,16 @@ export class ZibalGateway extends BaseGatewayAdapter {
       ...(req.mobile ? { mobile: req.mobile } : {}),
     };
 
-    const response = await this.http.post(`${this.baseUrl}/v1/request`, payload, {
+    const response = await this.http.post(`${baseUrl}/v1/request`, payload, {
       timeout: 20_000,
       transformResponse: [(d: string) => d],
     } as never);
     const body = JSON.parse((response as unknown as { data: string }).data ?? '{}');
 
-    if (body?.trackId && (body?.result === 100 || this.sandbox)) {
+    if (body?.trackId && (body?.result === 100 || sandbox)) {
       return {
         authority: String(body.trackId),
-        redirectUrl: `${this.sandbox ? 'https://sandbox.gateway.zibal.ir' : 'https://gateway.zibal.ir'}/${body.trackId}`,
+        redirectUrl: `${baseUrl}/${body.trackId}`,
         raw: body,
       };
     }
@@ -67,12 +67,14 @@ export class ZibalGateway extends BaseGatewayAdapter {
     authority: string;
     amountMinor: bigint;
   }): Promise<GatewayVerifyResult> {
+    const { merchantId, sandbox } = await this.settings.getZibalConfig();
+    const baseUrl = ZibalGateway.baseUrlFor(sandbox);
     const payload = {
-      merchant: this.sandbox ? 'zibal' : this.merchantId,
+      merchant: sandbox ? 'zibal' : merchantId,
       trackId: params.authority,
     };
 
-    const response = await this.http.post(`${this.baseUrl}/v1/verify`, payload, {
+    const response = await this.http.post(`${baseUrl}/v1/verify`, payload, {
       timeout: 20_000,
       transformResponse: [(d: string) => d],
     } as never);

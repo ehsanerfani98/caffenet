@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { mirrorTokenToIdb } from '@/lib/pwa/idb';
 
 /**
  * Auth store (7.1.7).
@@ -71,7 +72,9 @@ export const useAuthStore = create<AuthState>()(
 );
 
 // Mirror the access token to localStorage for the Axios interceptor
-// (api-client reads `access_token` on every request).
+// (api-client reads `access_token` on every request) AND into IndexedDB so
+// the service worker can use it for Background Sync (12.2.7) — localStorage
+// is NOT accessible from the SW context.
 export function persistTokenMirror(accessToken: string | null) {
   if (typeof window === 'undefined') return;
   if (accessToken) {
@@ -79,4 +82,5 @@ export function persistTokenMirror(accessToken: string | null) {
   } else {
     window.localStorage.removeItem('access_token');
   }
+  void mirrorTokenToIdb(accessToken);
 }

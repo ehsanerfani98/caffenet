@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PUSHER_CONFIG } from '@caffenet/shared';
-import { getPusherClient } from '@/lib/pusher/pusher-client';
+import { ensurePusherClient } from '@/lib/pusher/pusher-client';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useNotificationStore } from '@/lib/stores/notification-store';
 import { toUiNotification, type UiNotification } from '@/lib/notifications/map';
@@ -45,27 +45,36 @@ export function useNotificationRealtime(): void {
 
   useEffect(() => {
     if (!userId) return;
-    const pusher = getPusherClient();
-    if (!pusher) return;
+    let disposed = false;
+    let cleanup: (() => void) | null = null;
 
-    const channelName = PUSHER_CONFIG.PRIVATE_USER_CHANNEL(userId);
-    const channel = pusher.subscribe(channelName);
+    void ensurePusherClient().then((pusher) => {
+      if (disposed || !pusher) return;
 
-    const onCreated = (payload: NotificationCreatedPayload) => {
-      const item: UiNotification = toUiNotification(payload);
-      upsertRef.current(item);
-      // Bump the badge immediately (fall back to refetch on race)
-      queryClient.setQueryData<number>(UNREAD_KEY, (old) => (old ?? 0) + 1);
-      toast({
-        title: payload.title,
-        description: payload.body ?? undefined,
-      });
-    };
+      const channelName = PUSHER_CONFIG.PRIVATE_USER_CHANNEL(userId);
+      const channel = pusher.subscribe(channelName);
 
-    channel.bind('NotificationCreated', onCreated);
+      const onCreated = (payload: NotificationCreatedPayload) => {
+        const item: UiNotification = toUiNotification(payload);
+        upsertRef.current(item);
+        // Bump the badge immediately (fall back to refetch on race)
+        queryClient.setQueryData<number>(UNREAD_KEY, (old) => (old ?? 0) + 1);
+        toast({
+          title: payload.title,
+          description: payload.body ?? undefined,
+        });
+      };
+
+      channel.bind('NotificationCreated', onCreated);
+      cleanup = () => {
+        channel.unbind('NotificationCreated', onCreated);
+        pusher.unsubscribe(channelName);
+      };
+    });
+
     return () => {
-      channel.unbind('NotificationCreated', onCreated);
-      pusher.unsubscribe(channelName);
+      disposed = true;
+      cleanup?.();
     };
   }, [userId, queryClient]);
 }

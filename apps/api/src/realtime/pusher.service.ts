@@ -1,6 +1,6 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger } from '@nestjs/common';
 import Pusher from 'pusher';
+import { SettingsService } from '../config/settings.service';
 
 /**
  * Pusher.com cloud client.
@@ -13,38 +13,76 @@ import Pusher from 'pusher';
  *  - presence-request.{requestId}  (same + presence info)
  *  - private-user.{userId}          (user-specific notifications)
  *  - private-admin                  (all admins)
+ *
+ * Credentials resolution (Phase 12 pre-req — settings from DB):
+ *  - read from `system_settings` (admin site-settings UI) via SettingsService
+ *  - env (PUSHER_*) remains a fallback for zero-config boots
+ *  - the client is (re)initialized lazily; when an admin changes credentials
+ *    the fingerprint changes and a fresh client is built on the next call —
+ *    no restart required.
  */
 @Injectable()
-export class PusherService implements OnModuleInit {
+export class PusherService {
   private readonly logger = new Logger(PusherService.name);
   private client: Pusher | null = null;
-  private enabled = false;
+  private fingerprint = '';
+  private credentials: {
+    appId: string;
+    key: string;
+    secret: string;
+    cluster: string;
+    enabled: boolean;
+  } | null = null;
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly settings: SettingsService) {}
 
-  onModuleInit() {
-    const appId = this.config.get<string>('PUSHER_APP_ID');
-    const key = this.config.get<string>('PUSHER_KEY');
-    const secret = this.config.get<string>('PUSHER_SECRET');
-    const cluster = this.config.get<string>('PUSHER_CLUSTER', 'mt1');
+  /**
+   * Ensure a client exists for the CURRENT DB settings. Safe to call on every
+   * trigger/auth — returns instantly when the fingerprint is unchanged.
+   */
+  async ensureClient(): Promise<Pusher | null> {
+    const cfg = await this.settings.getPusherConfig();
+    const fingerprint = `${cfg.appId}|${cfg.key}|${cfg.secret}|${cfg.cluster}|${cfg.enabled}`;
 
-    if (!appId || !key || !secret) {
+    if (this.client && this.fingerprint === fingerprint) return this.client;
+
+    this.credentials = cfg;
+    this.fingerprint = fingerprint;
+    this.client = null;
+
+    if (!cfg.enabled || !cfg.appId || !cfg.key || !cfg.secret) {
       this.logger.warn(
-        '⚠️ Pusher credentials missing — real-time events will be no-op. Set PUSHER_APP_ID, PUSHER_KEY, PUSHER_SECRET in env.',
+        '⚠️ Pusher disabled or credentials missing — real-time events are no-op. Configure in Admin → Settings → Pusher (or env).',
       );
-      this.enabled = false;
-      return;
+      return null;
     }
 
-    this.client = new Pusher({
-      appId,
-      key,
-      secret,
-      cluster,
-      useTLS: true,
-    });
-    this.enabled = true;
-    this.logger.log(`✅ Pusher client initialized (cluster: ${cluster})`);
+    try {
+      this.client = new Pusher({
+        appId: cfg.appId,
+        key: cfg.key,
+        secret: cfg.secret,
+        cluster: cfg.cluster,
+        useTLS: true,
+      });
+      this.logger.log(`✅ Pusher client initialized (cluster: ${cfg.cluster})`);
+    } catch (err) {
+      this.logger.error(`Pusher client init failed: ${err instanceof Error ? err.message : err}`);
+      this.client = null;
+    }
+    return this.client;
+  }
+
+  /** Public key / secret for the Pusher webhook HMAC check (null when unset). */
+  async getCredentials(): Promise<{ key: string; secret: string } | null> {
+    await this.ensureClient();
+    if (!this.credentials || !this.credentials.key || !this.credentials.secret) return null;
+    return { key: this.credentials.key, secret: this.credentials.secret };
+  }
+
+  /** Whether the broadcasting auth endpoint can sign subscriptions right now. */
+  async isReady(): Promise<boolean> {
+    return (await this.ensureClient()) !== null;
   }
 
   /**
@@ -52,12 +90,13 @@ export class PusherService implements OnModuleInit {
    * Safe to call even if Pusher is disabled (no-op).
    */
   async trigger(channel: string, event: string, data: unknown): Promise<void> {
-    if (!this.enabled || !this.client) {
+    const client = await this.ensureClient();
+    if (!client) {
       this.logger.debug(`Pusher disabled — skipping event ${event} on ${channel}`);
       return;
     }
     try {
-      await this.client.trigger(channel, event, data);
+      await client.trigger(channel, event, data);
     } catch (err) {
       this.logger.error(`Failed to publish ${event} on ${channel}: ${(err as Error).message}`);
       // Don't throw — we don't want to fail the calling transaction
@@ -66,13 +105,14 @@ export class PusherService implements OnModuleInit {
 
   /**
    * Authenticate a private/presence channel subscription request from a client.
+   * Call ensureClient() first (BroadcastingController.authorize awaits isReady).
    */
   authenticate(
     socketId: string,
     channel: string,
     userData?: { user_id: string; user_info?: unknown },
   ): string {
-    if (!this.enabled || !this.client) {
+    if (!this.client) {
       throw new Error('Pusher not configured');
     }
     if (channel.startsWith('presence-')) {

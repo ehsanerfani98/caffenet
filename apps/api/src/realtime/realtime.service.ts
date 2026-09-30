@@ -47,6 +47,16 @@ export class RealtimeService {
     await this.pusher.trigger(channel, 'MessageRead', data);
   }
 
+  /** Ensure the DB-configured Pusher client is ready before authenticateChannel. */
+  async ensureReady(): Promise<boolean> {
+    return this.pusher.isReady();
+  }
+
+  /** Public/secret key pair of the ACTIVE Pusher app (webhook HMAC check). */
+  async getCredentials(): Promise<{ key: string; secret: string } | null> {
+    return this.pusher.getCredentials();
+  }
+
   /** Authenticate a private/presence channel subscription */
   authenticateChannel(
     socketId: string,

@@ -121,6 +121,9 @@ importers:
       nestjs-pino:
         specifier: ^4.1.0
         version: 4.6.1(@nestjs/common@11.2.6(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@10.5.0)(pino@9.14.0)(rxjs@7.8.2)
+      nodemailer:
+        specifier: ^6.9.16
+        version: 6.10.1
       passport:
         specifier: ^0.7.0
         version: 0.7.0
@@ -182,6 +185,9 @@ importers:
       '@types/node':
         specifier: ^20.16.0
         version: 20.19.43
+      '@types/nodemailer':
+        specifier: ^6.4.16
+        version: 6.4.24
       '@types/passport-jwt':
         specifier: ^4.0.1
         version: 4.0.1
@@ -300,6 +306,9 @@ importers:
       autoprefixer:
         specifier: ^10.4.20
         version: 10.6.1(postcss@8.5.28)
+      babel-loader:
+        specifier: ^9.2.1
+        version: 9.2.1(@babel/core@7.29.7)(webpack@5.106.2(lightningcss@1.32.0)(postcss@8.5.28))
       eslint:
         specifier: ^9.13.0
         version: 9.39.5(jiti@1.21.7)
@@ -3864,6 +3873,12 @@ packages:
         integrity: sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA==,
       }
 
+  '@types/nodemailer@6.4.24':
+    resolution:
+      {
+        integrity: sha512-Ww4u0rT9wQNXh4JiQaIwx3QWdcOFXzOjQA2zc+jtFYNmQiT4mIUqcDin51bDFdkzKubFnQCZNK7FIHlPKQ/q9w==,
+      }
+
   '@types/passport-jwt@4.0.1':
     resolution:
       {
@@ -4830,6 +4845,16 @@ packages:
       '@babel/core': ^7.0.0
       webpack: '>=2'
 
+  babel-loader@9.2.1:
+    resolution:
+      {
+        integrity: sha512-fqe8naHt46e0yIdkjUZYqddSXfej3AHajX+CSO5X7oy0EmPc6o5Xh+RClNoHjnieWz9AW4kZxW9yyFMhVB1QLA==,
+      }
+    engines: { node: '>= 14.15.0' }
+    peerDependencies:
+      '@babel/core': ^7.12.0
+      webpack: '>=5'
+
   babel-plugin-polyfill-corejs2@0.4.17:
     resolution:
       {
@@ -5309,6 +5334,12 @@ packages:
         integrity: sha512-uiqLcOiVDJtBP8WGkZHEP+FZIhTzP1dxvn59EfoYUi9gqupjrBWVQkO2atDrbnKPwLeotFYDsuNb26uBMqB+hw==,
       }
     engines: { node: '>= 6' }
+
+  common-path-prefix@3.0.0:
+    resolution:
+      {
+        integrity: sha512-QE33hToZseCH3jS0qN96O/bSh3kaw/h+Tq7ngyY9eWDUnTlTNUyqfqvCXioLe5Na5jFsL78ra/wuBU4iuEgd4w==,
+      }
 
   common-tags@1.8.2:
     resolution:
@@ -6402,6 +6433,13 @@ packages:
       }
     engines: { node: '>=8' }
 
+  find-cache-dir@4.0.0:
+    resolution:
+      {
+        integrity: sha512-9ZonPT4ZAK4a+1pUPVPZJapbi7O5qbbJPdYw/NOQWZZbVLdDTYM3A4R9z/DpAM08IDaFGsvPgiGZ82WEwUDWjg==,
+      }
+    engines: { node: '>=14.16' }
+
   find-up@4.1.0:
     resolution:
       {
@@ -6415,6 +6453,13 @@ packages:
         integrity: sha512-78/PXT1wlLLDgTzDs7sjq9hzz0vXD+zn+7wypEe4fXQxCmdmqfGsEPQxmiCSQI3ajFV91bVSsvNtrJRiW6nGng==,
       }
     engines: { node: '>=10' }
+
+  find-up@6.3.0:
+    resolution:
+      {
+        integrity: sha512-v2ZsoEuVHYy8ZIlYqwPe/39Cy+cFDzp4dXPaxNvkEuouymu+2Jbz0PxpKarJHYJTmv2HWT3O382qY8l4jMWthw==,
+      }
+    engines: { node: ^12.20.0 || ^14.13.1 || >=16.0.0 }
 
   find-up@7.0.0:
     resolution:
@@ -8452,6 +8497,13 @@ packages:
       }
     engines: { node: '>=18' }
 
+  nodemailer@6.10.1:
+    resolution:
+      {
+        integrity: sha512-Z+iLaBGVaSjbIzQ4pX6XV41HrooLsQ10ZWPUehGmuantvzWoDVBnmsdUcOIDM1t+yPor5pDhVlDESgOMEGxhHA==,
+      }
+    engines: { node: '>=6.0.0' }
+
   nopt@5.0.0:
     resolution:
       {
@@ -8935,6 +8987,13 @@ packages:
         integrity: sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==,
       }
     engines: { node: '>=8' }
+
+  pkg-dir@7.0.0:
+    resolution:
+      {
+        integrity: sha512-Ie9z/WINcxxLp27BKOCHGde4ITq9UklYKDzVo1nhk5sqGEXU3FpkwP5GM2voTGJkGd9B3Otl+Q4uwSOeSUtOBA==,
+      }
+    engines: { node: '>=14.16' }
 
   pluralize@8.0.0:
     resolution:
@@ -13445,6 +13504,10 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/nodemailer@6.4.24':
+    dependencies:
+      '@types/node': 20.19.43
+
   '@types/passport-jwt@4.0.1':
     dependencies:
       '@types/jsonwebtoken': 9.0.10
@@ -14075,6 +14138,13 @@ snapshots:
       schema-utils: 2.7.1
       webpack: 5.106.2(lightningcss@1.32.0)(postcss@8.5.28)
 
+  babel-loader@9.2.1(@babel/core@7.29.7)(webpack@5.106.2(lightningcss@1.32.0)(postcss@8.5.28)):
+    dependencies:
+      '@babel/core': 7.29.7
+      find-cache-dir: 4.0.0
+      schema-utils: 4.5.0
+      webpack: 5.106.2(lightningcss@1.32.0)(postcss@8.5.28)
+
   babel-plugin-polyfill-corejs2@0.4.17(@babel/core@7.29.7):
     dependencies:
       '@babel/compat-data': 7.29.7
@@ -14362,6 +14432,8 @@ snapshots:
     dependencies:
       array-timsort: 1.0.3
       esprima: 4.0.1
+
+  common-path-prefix@3.0.0: {}
 
   common-tags@1.8.2: {}
 
@@ -15238,6 +15310,11 @@ snapshots:
       make-dir: 3.1.0
       pkg-dir: 4.2.0
 
+  find-cache-dir@4.0.0:
+    dependencies:
+      common-path-prefix: 3.0.0
+      pkg-dir: 7.0.0
+
   find-up@4.1.0:
     dependencies:
       locate-path: 5.0.0
@@ -15247,6 +15324,11 @@ snapshots:
     dependencies:
       locate-path: 6.0.0
       path-exists: 4.0.0
+
+  find-up@6.3.0:
+    dependencies:
+      locate-path: 7.2.0
+      path-exists: 5.0.0
 
   find-up@7.0.0:
     dependencies:
@@ -16418,6 +16500,8 @@ snapshots:
 
   node-releases@2.0.57: {}
 
+  nodemailer@6.10.1: {}
+
   nopt@5.0.0:
     dependencies:
       abbrev: 1.1.1
@@ -16703,6 +16787,10 @@ snapshots:
   pkg-dir@4.2.0:
     dependencies:
       find-up: 4.1.0
+
+  pkg-dir@7.0.0:
+    dependencies:
+      find-up: 6.3.0
 
   pluralize@8.0.0: {}
 

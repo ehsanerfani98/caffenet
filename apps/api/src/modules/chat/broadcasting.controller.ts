@@ -9,7 +9,6 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { IsString } from 'class-validator';
 import { Request } from 'express';
@@ -48,7 +47,6 @@ export class BroadcastingController {
   constructor(
     private readonly realtime: RealtimeService,
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
   ) {}
 
   /** 10.1.3 — signed channel authorization behind JWT auth. */
@@ -65,6 +63,11 @@ export class BroadcastingController {
     }
 
     await this.assertChannelAccess(channel, user);
+
+    // Ensure the DB-configured Pusher client is loaded before signing
+    if (!(await this.realtime.ensureReady())) {
+      throw new ForbiddenException('سرویس Real-time تنظیم نشده است');
+    }
 
     const isPresence = channel.startsWith('presence-');
     const auth = this.realtime.authenticateChannel(
@@ -89,8 +92,10 @@ export class BroadcastingController {
   @Public()
   @ApiOperation({ summary: 'وب‌هوک Pusher (channel_existence) با امضای HMAC' })
   async webhook(@Req() req: RawBodyRequest<Request>) {
-    const key = this.config.get<string>('PUSHER_KEY');
-    const secret = this.config.get<string>('PUSHER_SECRET');
+    // Credentials come from DB settings (Admin → Settings → Pusher), env fallback
+    const credentials = await this.realtime.getCredentials();
+    const key = credentials?.key;
+    const secret = credentials?.secret;
 
     const pusherKey = req.headers['x-pusher-key'] as string | undefined;
     const signature = req.headers['x-pusher-signature'] as string | undefined;

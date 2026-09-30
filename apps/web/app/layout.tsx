@@ -26,8 +26,11 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false },
   manifest: '/manifest.webmanifest',
   icons: {
-    icon: '/icons/icon-192.png',
-    apple: '/icons/icon-192.png',
+    icon: [
+      { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: '/icons/apple-touch-icon.png',
   },
 };
 
@@ -38,12 +41,12 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-}
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fa" dir="rtl" className={vazirmatn.variable}>
-      <body className="font-sans antialiased bg-gray-50 text-gray-900 min-h-dvh">
+      <body className="min-h-dvh bg-gray-50 font-sans text-gray-900 antialiased">
         <NextIntlClientProvider locale="fa" messages={{}}>
           <Providers>
             {children}

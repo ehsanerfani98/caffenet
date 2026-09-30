@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NotificationRealtimeBridge } from '@/components/common/NotificationRealtimeBridge';
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -18,6 +18,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       }),
   );
+
+  // Phase 12.2.7 — hand the API base URL to the service worker so the chat
+  // outbox flush (Background Sync) knows where to POST queued messages.
+  useEffect(() => {
+    const api = process.env.NEXT_PUBLIC_API_URL;
+    if (!api || typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready
+      .then((reg) => {
+        reg.active?.postMessage({ type: 'CAFFENET_SET_API_URL', url: api });
+      })
+      .catch(() => undefined);
+  }, []);
 
   return (
     <QueryClientProvider client={client}>

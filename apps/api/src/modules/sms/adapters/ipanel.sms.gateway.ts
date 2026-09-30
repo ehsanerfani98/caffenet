@@ -1,7 +1,7 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import { SmsGateway, SmsSendResult } from '../sms.interface';
+import { SettingsService } from '../../../config/settings.service';
 
 /**
  * iPanel SMS Gateway adapter.
@@ -15,39 +15,33 @@ import { SmsGateway, SmsSendResult } from '../sms.interface';
  *    Sends raw text. Sender number from account.
  *
  * Authentication: api_key in request body.
+ *
+ * Config resolution (Phase 12 pre-req — settings from DB): apiKey / sender /
+ * OTP pattern are read at SEND time from Admin → Settings → SMS, with the
+ * IPANEL_* env vars as fallback — admin changes apply without restart.
  */
 @Injectable()
-export class IPanelSmsGateway implements SmsGateway, OnModuleInit {
+export class IPanelSmsGateway implements SmsGateway {
   private readonly logger = new Logger(IPanelSmsGateway.name);
   readonly name = 'ipanel';
-  private apiKey!: string;
-  private sender!: string;
-  private defaultOtpPatternCode?: string;
-  private defaultOtpParamName: string;
   private http!: AxiosInstance;
   private readonly baseUrl = 'https://ippanel.com/services/v2';
 
-  constructor(private readonly config: ConfigService) {
-    this.defaultOtpParamName = this.config.get<string>('IPANEL_OTP_PARAM_NAME', 'code')!;
-  }
+  constructor(private readonly settings: SettingsService) {}
 
-  onModuleInit() {
-    this.apiKey = this.config.get<string>('IPANEL_API_KEY', '')!;
-    this.sender = this.config.get<string>('IPANEL_SENDER', '')!;
-    this.defaultOtpPatternCode = this.config.get<string>('IPANEL_OTP_PATTERN_CODE');
-
-    if (!this.apiKey) {
-      this.logger.warn('⚠️ IPANEL_API_KEY missing — OTP SMS will fail. Set it in env.');
-    }
-    if (!this.defaultOtpPatternCode) {
-      this.logger.warn('⚠️ IPANEL_OTP_PATTERN_CODE missing — OTP SMS will fail. Register a pattern at ippanel.com and set its code in env.');
-    }
-
-    this.http = axios.create({
-      baseURL: this.baseUrl,
-      timeout: 10_000,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  private async resolveConfig(): Promise<{
+    apiKey: string;
+    sender: string;
+    otpPatternCode?: string;
+    otpParamName: string;
+  }> {
+    const cfg = await this.settings.getSmsConfig();
+    return {
+      apiKey: cfg.ipanelApiKey,
+      sender: cfg.ipanelSender,
+      otpPatternCode: cfg.ipanelOtpPatternCode,
+      otpParamName: cfg.ipanelOtpParamName,
+    };
   }
 
   /**
@@ -58,23 +52,24 @@ export class IPanelSmsGateway implements SmsGateway, OnModuleInit {
     params: Record<string, string>,
     patternCode?: string,
   ): Promise<SmsSendResult> {
-    const code = patternCode ?? this.defaultOtpPatternCode;
+    const cfg = await this.resolveConfig();
+    const code = patternCode ?? cfg.otpPatternCode;
     if (!code) {
       return {
         success: false,
-        error: 'No OTP pattern code configured. Set IPANEL_OTP_PATTERN_CODE in env.',
+        error: 'No OTP pattern code configured. Set it in Admin → Settings → SMS.',
       };
     }
-    if (!this.apiKey) {
-      return { success: false, error: 'IPANEL_API_KEY not configured' };
+    if (!cfg.apiKey) {
+      return { success: false, error: 'iPanel API key not configured (Admin → Settings → SMS)' };
     }
 
     const normalizedPhone = this.normalizePhone(phone);
     try {
       const response = await this.http.post('/send-pattern', {
-        api_key: this.apiKey,
+        api_key: cfg.apiKey,
         pattern_code: code,
-        from: this.sender,
+        from: cfg.sender,
         to: normalizedPhone,
         input: params,
       });
@@ -82,8 +77,7 @@ export class IPanelSmsGateway implements SmsGateway, OnModuleInit {
       const data = response.data;
       // iPanel response shapes vary; accept any 200 with a message_id
       if (response.status === 200 || data?.status === 200 || data?.code === 200) {
-        const messageId =
-          data?.data?.message_id ?? data?.message_id ?? data?.id ?? 'unknown';
+        const messageId = data?.data?.message_id ?? data?.message_id ?? data?.id ?? 'unknown';
         this.logger.log(
           `📱 OTP SMS sent to ${this.maskPhone(normalizedPhone)} via pattern ${code} (msgid: ${messageId})`,
         );
@@ -106,14 +100,15 @@ export class IPanelSmsGateway implements SmsGateway, OnModuleInit {
    * Send direct text message (no pattern).
    */
   async sendSms(phone: string, message: string): Promise<SmsSendResult> {
-    if (!this.apiKey || !this.sender) {
-      return { success: false, error: 'IPANEL_API_KEY or IPANEL_SENDER not configured' };
+    const cfg = await this.resolveConfig();
+    if (!cfg.apiKey || !cfg.sender) {
+      return { success: false, error: 'iPanel API key / sender number not configured' };
     }
     const normalizedPhone = this.normalizePhone(phone);
     try {
       const response = await this.http.post('/send', {
-        api_key: this.apiKey,
-        from: this.sender,
+        api_key: cfg.apiKey,
+        from: cfg.sender,
         to: normalizedPhone,
         message,
       });

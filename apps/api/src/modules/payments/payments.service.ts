@@ -23,6 +23,7 @@ import {
 import { PaymentGateway, GatewayVerifyResult } from './payment-gateway.interface';
 import { ZarinpalGateway } from './gateways/zarinpal.gateway';
 import { ZibalGateway } from './gateways/zibal.gateway';
+import { SettingsService } from '../../config/settings.service';
 
 /**
  * PaymentsService (Phase 6.4) — online payment orchestration.
@@ -62,10 +63,11 @@ export class PaymentsService {
     private readonly wallet: WalletService,
     private readonly events: EventBusService,
     private readonly realtime: RealtimeService,
+    private readonly settings: SettingsService,
     config: ConfigService,
   ) {
-    const zarinpal = new ZarinpalGateway(config);
-    const zibal = new ZibalGateway(config);
+    const zarinpal = new ZarinpalGateway(this.settings);
+    const zibal = new ZibalGateway(this.settings);
     this.gateways = new Map<string, PaymentGateway>([
       [zarinpal.name, zarinpal],
       [zibal.name, zibal],

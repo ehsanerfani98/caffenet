@@ -65,67 +65,36 @@ export const envValidation = Joi.object({
   COOKIE_SECRET: Joi.string().min(32).required(),
   BCRYPT_COST: Joi.number().default(12),
 
-  // Pusher
-  PUSHER_APP_ID: Joi.string().when('NODE_ENV', {
-    is: 'production',
-    then: Joi.required(),
-    otherwise: Joi.allow(''),
-  }),
-  PUSHER_KEY: Joi.string().when('NODE_ENV', {
-    is: 'production',
-    then: Joi.required(),
-    otherwise: Joi.allow(''),
-  }),
-  PUSHER_SECRET: Joi.string().when('NODE_ENV', {
-    is: 'production',
-    then: Joi.required(),
-    otherwise: Joi.allow(''),
-  }),
+  // Pusher — DB settings (Admin → تنظیمات سایت) are the primary source;
+  // env vars remain an optional fallback for zero-config boots.
+  PUSHER_APP_ID: Joi.string().allow(''),
+  PUSHER_KEY: Joi.string().allow(''),
+  PUSHER_SECRET: Joi.string().allow(''),
   PUSHER_CLUSTER: Joi.string().default('mt1'),
 
-  // ZarinPal
-  ZARINPAL_MERCHANT_ID: Joi.string().when('NODE_ENV', {
-    is: 'production',
-    then: Joi.required(),
-    otherwise: Joi.allow(''),
-  }),
+  // ZarinPal — merchant id now managed via Admin → Settings (DB), env fallback
+  ZARINPAL_MERCHANT_ID: Joi.string().allow(''),
   ZARINPAL_SANDBOX: Joi.boolean().default(true),
   ZARINPAL_CALLBACK_URL: Joi.string().uri().required(),
   // Zibal (Phase 6.4.4)
-  ZIBAL_MERCHANT_ID: Joi.string().when('NODE_ENV', {
-    is: 'production',
-    then: Joi.required(),
-    otherwise: Joi.allow(''),
-  }),
+  ZIBAL_MERCHANT_ID: Joi.string().allow(''),
   ZIBAL_SANDBOX: Joi.boolean().default(true),
   PAYMENT_DEFAULT_GATEWAY: Joi.string().valid('zarinpal', 'zibal').default('zarinpal'),
 
-  // iPanel SMS
-  IPANEL_API_KEY: Joi.string().when('NODE_ENV', {
-    is: 'production',
-    then: Joi.required(),
-    otherwise: Joi.allow(''),
-  }),
+  // iPanel SMS — API key now managed via Admin → Settings (DB), env fallback
+  IPANEL_API_KEY: Joi.string().allow(''),
   IPANEL_SENDER: Joi.string().allow(''),
   IPANEL_OTP_PATTERN_CODE: Joi.string().allow(''),
   IPANEL_OTP_PARAM_NAME: Joi.string().default('code'),
-  // SMS driver selector — controls which adapter SmsModule loads
+  // SMS driver selector — env fallback for `sms.provider` DB setting
   SMS_DRIVER: Joi.string().valid('ipanel', 'kavenegar', 'console').default('ipanel'),
 
-  // VAPID
-  VAPID_PUBLIC_KEY: Joi.string().when('NODE_ENV', {
-    is: 'production',
-    then: Joi.required(),
-    otherwise: Joi.allow(''),
-  }),
-  VAPID_PRIVATE_KEY: Joi.string().when('NODE_ENV', {
-    is: 'production',
-    then: Joi.required(),
-    otherwise: Joi.allow(''),
-  }),
+  // VAPID — keys now managed via Admin → Settings (DB), env fallback
+  VAPID_PUBLIC_KEY: Joi.string().allow(''),
+  VAPID_PRIVATE_KEY: Joi.string().allow(''),
   VAPID_SUBJECT: Joi.string().allow(''),
 
-  // Mail
+  // Mail — SMTP config now managed via Admin → Settings (DB), env fallback
   MAIL_HOST: Joi.string().allow(''),
   MAIL_PORT: Joi.number().default(587),
   MAIL_USER: Joi.string().allow(''),

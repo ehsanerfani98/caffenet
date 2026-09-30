@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Axios } from 'axios';
 import {
   BaseGatewayAdapter,
@@ -7,6 +6,7 @@ import {
   GatewayVerifyResult,
   GatewayPaymentRequest,
 } from '../payment-gateway.interface';
+import { SettingsService } from '../../../config/settings.service';
 
 /**
  * ZarinPal gateway adapter (Phase 6.4.3) — PG v4 REST API.
@@ -18,28 +18,31 @@ import {
  * Amount unit: v4 expects Rials — Caffenet minor units are Rials (IRT×100),
  * so we pass amounts through unchanged.
  *
- * Config: ZARINPAL_MERCHANT_ID, ZARINPAL_SANDBOX (default true).
+ * Config (Phase 12 pre-req — settings from DB): merchant id / sandbox read at
+ * REQUEST time from Admin → Settings → درگاه پرداخت, ZARINPAL_* env fallback.
  */
 @Injectable()
 export class ZarinpalGateway extends BaseGatewayAdapter {
   readonly name = 'zarinpal';
   private readonly http = new Axios({ headers: { 'Content-Type': 'application/json' } });
-  private readonly merchantId: string;
-  private readonly sandbox: boolean;
 
-  constructor(config: ConfigService) {
+  constructor(private readonly settings: SettingsService) {
     super();
-    this.merchantId = config.get<string>('ZARINPAL_MERCHANT_ID', '')!;
-    this.sandbox = config.get<boolean>('ZARINPAL_SANDBOX', true);
   }
 
-  private get baseUrl(): string {
-    return this.sandbox ? 'https://sandbox.zarinpal.com' : 'https://payment.zarinpal.com';
+  private async resolveConfig(): Promise<{ merchantId: string; sandbox: boolean }> {
+    return this.settings.getZarinpalConfig();
+  }
+
+  private baseUrlFor(sandbox: boolean): string {
+    return sandbox ? 'https://sandbox.zarinpal.com' : 'https://payment.zarinpal.com';
   }
 
   async createPayment(req: GatewayPaymentRequest): Promise<GatewayCreateResult> {
+    const { merchantId, sandbox } = await this.resolveConfig();
+    const baseUrl = this.baseUrlFor(sandbox);
     const payload = {
-      merchant_id: this.merchantId,
+      merchant_id: merchantId,
       amount: Number(req.amountMinor),
       description: req.description.slice(0, 255),
       callback_url: req.callbackUrl,
@@ -49,7 +52,7 @@ export class ZarinpalGateway extends BaseGatewayAdapter {
       },
     };
 
-    const response = await this.http.post(`${this.baseUrl}/pg/v4/payment/request.json`, payload, {
+    const response = await this.http.post(`${baseUrl}/pg/v4/payment/request.json`, payload, {
       timeout: 20_000,
       // Axios instance is not typed; treat body generically
       transformResponse: [(d: string) => d],
@@ -59,7 +62,7 @@ export class ZarinpalGateway extends BaseGatewayAdapter {
     if (body?.data?.authority) {
       return {
         authority: body.data.authority,
-        redirectUrl: `${this.baseUrl}/pg/StartPay/${body.data.authority}`,
+        redirectUrl: `${baseUrl}/pg/StartPay/${body.data.authority}`,
         raw: body,
       };
     }
@@ -72,13 +75,15 @@ export class ZarinpalGateway extends BaseGatewayAdapter {
     authority: string;
     amountMinor: bigint;
   }): Promise<GatewayVerifyResult> {
+    const { merchantId, sandbox } = await this.resolveConfig();
+    const baseUrl = this.baseUrlFor(sandbox);
     const payload = {
-      merchant_id: this.merchantId,
+      merchant_id: merchantId,
       amount: Number(params.amountMinor),
       authority: params.authority,
     };
 
-    const response = await this.http.post(`${this.baseUrl}/pg/v4/payment/verify.json`, payload, {
+    const response = await this.http.post(`${baseUrl}/pg/v4/payment/verify.json`, payload, {
       timeout: 20_000,
       transformResponse: [(d: string) => d],
     } as never);

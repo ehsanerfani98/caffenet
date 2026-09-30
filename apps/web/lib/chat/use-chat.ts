@@ -7,10 +7,12 @@ import { chatApi, type ChatMessageDto } from '@/lib/api/chat';
 import {
   bindConnectionState,
   emitTyping,
+  ensurePusherClient,
   subscribeRequestChannels,
   unsubscribeRequestChannels,
   type ConnectionState,
 } from '@/lib/pusher/pusher-client';
+import { enqueueChatMessage, flushChatOutbox, registerChatSync } from '@/lib/pwa/chat-outbox';
 
 const MESSAGES_KEY = (requestId: string) => ['chat-messages', requestId] as const;
 
@@ -70,6 +72,8 @@ export function useChat(requestId: string) {
   // ---------- Live channel ----------
   useEffect(() => {
     if (!requestId || !meId) return;
+    let disposed = false;
+    let cleanupSubscribe: (() => void) | null = null;
 
     const upsertMessage = (raw: unknown) => {
       const msg = raw as ChatMessageDto;
@@ -145,11 +149,20 @@ export function useChat(requestId: string) {
       typingTimer.current = setTimeout(() => setTypingFrom(null), 2500);
     };
 
-    subscribeRequestChannels(requestId, {
-      onMessage: upsertMessage,
-      onMessageRead: applyRead,
-      onDeleted: applyDeleted,
-      onTyping: handleTyping,
+    // DB-managed Pusher config + client creation, then channel subscription
+    void ensurePusherClient().then((pusher) => {
+      if (disposed || !pusher) return;
+      const { privateChannel, presenceChannel } = subscribeRequestChannels(requestId, {
+        onMessage: upsertMessage,
+        onMessageRead: applyRead,
+        onDeleted: applyDeleted,
+        onTyping: handleTyping,
+      });
+      cleanupSubscribe = () => {
+        if (privateChannel) privateChannel.unbind_all();
+        if (presenceChannel) presenceChannel.unbind_all();
+        unsubscribeRequestChannels(requestId);
+      };
     });
 
     // 10.5.8 — connection indicator + 10.5.9 refetch on reconnect
@@ -162,8 +175,9 @@ export function useChat(requestId: string) {
     });
 
     return () => {
+      disposed = true;
       unbind();
-      unsubscribeRequestChannels(requestId);
+      cleanupSubscribe?.();
       if (typingTimer.current) clearTimeout(typingTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -185,6 +199,43 @@ export function useChat(requestId: string) {
     return () => document.removeEventListener('visibilitychange', markVisible);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestId, messages.length]);
+
+  // ---------- Outbox flush (12.2.7 — Safari/Firefox fallback + reconciliation) ----------
+  useEffect(() => {
+    if (!requestId) return;
+
+    const reconcile = (delivered: Array<{ id: string; message: unknown }>) => {
+      if (delivered.length === 0) return;
+      queryClient.setQueryData<InfiniteData<MessagesPage>>(MESSAGES_KEY(requestId), (data) => {
+        if (!data) return data;
+        const pages = data.pages.map((p) => ({ ...p, items: [...p.items] }));
+        for (const d of delivered) {
+          const msg = d.message as ChatMessageDto;
+          for (const page of pages) {
+            const idx = page.items.findIndex((m) => m.id === d.id);
+            if (idx >= 0) {
+              page.items[idx] = msg;
+              break;
+            }
+          }
+        }
+        return { ...data, pages };
+      });
+      void queryClient.invalidateQueries({ queryKey: ['chat-rooms'] });
+    };
+
+    const flush = () => {
+      void flushChatOutbox().then(reconcile);
+      // also nudge the SW (dedup safe — delivered items are removed first)
+      navigator.serviceWorker?.controller?.postMessage({ type: 'CAFFENET_FLUSH_OUTBOX' });
+    };
+
+    window.addEventListener('online', flush);
+    // Flush any queue built up while this room was closed
+    void flushChatOutbox().then(reconcile);
+    return () => window.removeEventListener('online', flush);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestId, queryClient]);
 
   // ---------- Send (optimistic + rollback) ----------
   const textMutation = useMutation({
@@ -218,8 +269,30 @@ export function useChat(requestId: string) {
       });
       return { previous, tempId: temp.id };
     },
-    onError: (_err, _body, ctx) => {
-      // 10.5.7 — rollback optimistic append
+    onError: (_err, body, ctx) => {
+      // 12.2.7 — network-level failure (offline / no response): queue the
+      // message in the outbox and KEEP the optimistic bubble so the user
+      // sees it as pending until Background Sync delivers it.
+      const isNetworkError = _err instanceof Error && _err.message.includes('Network Error');
+      if (isNetworkError && ctx) {
+        void (async () => {
+          await enqueueChatMessage({
+            id: ctx.tempId,
+            requestId,
+            body,
+            createdAt: new Date().toISOString(),
+          });
+          const swReady = await registerChatSync();
+          if (!swReady && typeof window !== 'undefined') {
+            // Safari/Firefox fallback — flush as soon as we are back online
+            navigator.serviceWorker?.controller?.postMessage({
+              type: 'CAFFENET_FLUSH_OUTBOX',
+            });
+          }
+        })();
+        return; // keep the optimistic message in place
+      }
+      // 10.5.7 — HTTP-level failure: rollback optimistic append
       if (ctx?.previous) queryClient.setQueryData(MESSAGES_KEY(requestId), ctx.previous);
     },
     onSuccess: (saved, _body, ctx) => {

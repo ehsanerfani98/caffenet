@@ -10,6 +10,7 @@ import { PrismaModule } from './database/prisma.module';
 import { AppController } from './app.controller';
 import { envValidation } from './config/env.validation';
 import { DeploymentProfileModule } from './config/deployment-profile.module';
+import { SettingsModule } from './config/settings.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { RealtimeModule } from './realtime/realtime.module';
@@ -97,6 +98,7 @@ import { MailModule } from './modules/mail/mail.module';
     // Core infrastructure
     DeploymentProfileModule,
     PrismaModule,
+    SettingsModule, // DB-backed runtime config (env fallback) — Phase 12 pre-req
     RealtimeModule,
     CacheModule,
     QueueModule,
