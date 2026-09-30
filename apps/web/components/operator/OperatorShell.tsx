@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   Activity,
-  Bell,
   ClipboardList,
   Inbox,
   LayoutDashboard,
@@ -18,6 +17,7 @@ import { useAuth } from '@/lib/hooks/use-auth';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { cn } from '@/lib/utils';
 import { toPersianDigits } from '@/lib/format';
+import { NotificationBell } from '@/components/common/NotificationBell';
 
 /**
  * OperatorShell (8.1) — operator console chrome.
@@ -153,13 +153,10 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
                   <span>تخصیص‌یافته: {toPersianDigits(assignedToMe)}</span>
                 </Link>
               )}
-              <Link
+              <NotificationBell
                 href="/notifications"
-                aria-label="اعلان‌ها"
-                className="rounded-full p-2 transition-colors hover:bg-white/15"
-              >
-                <Bell className="h-5 w-5" />
-              </Link>
+                className="transition-colors hover:bg-white/15"
+              />
               <button
                 type="button"
                 onClick={() => void logout()}

@@ -21,7 +21,15 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { QUEUE_TOKEN } from './queue/interfaces/queue.interface';
+import { createJobHandlers } from './queue/handlers';
 import { DeploymentProfileService } from './config/deployment-profile.service';
+import { PrismaService } from './database/prisma.service';
+import { RealtimeService } from './realtime/realtime.service';
+import { NotificationService } from './modules/notifications/notification.service';
+import { PushService } from './modules/notifications/push.service';
+import { MailService } from './modules/mail/mail.service';
+import { SMS_GATEWAY_TOKEN } from './modules/sms/sms.interface';
+import type { SmsGateway } from './modules/sms/sms.interface';
 
 interface WorkerArgs {
   maxJobs: number;
@@ -62,7 +70,9 @@ async function bootstrap() {
   const logger = new Logger('Worker');
   const args = parseArgs();
 
-  logger.log(`🚀 Worker starting — maxJobs=${args.maxJobs}, timeout=${args.timeoutSeconds}s, queue=${args.queueName}`);
+  logger.log(
+    `🚀 Worker starting — maxJobs=${args.maxJobs}, timeout=${args.timeoutSeconds}s, queue=${args.queueName}`,
+  );
 
   const app = await NestFactory.createApplicationContext(AppModule, {
     logger: ['error', 'warn', 'log'],
@@ -72,6 +82,16 @@ async function bootstrap() {
     const queue = app.get(QUEUE_TOKEN);
     const profile = app.get(DeploymentProfileService);
     logger.log(`Profile: ${profile.profile}, queue driver: ${profile.queueDriver}`);
+
+    // Phase 11 — job handler registry (dispatch by JobName)
+    const handlers = createJobHandlers({
+      prisma: app.get(PrismaService),
+      realtime: app.get(RealtimeService),
+      push: app.get(PushService),
+      notifications: app.get(NotificationService),
+      mail: app.get(MailService),
+      sms: app.get<SmsGateway>(SMS_GATEWAY_TOKEN),
+    });
 
     const reservationSeconds = args.timeoutSeconds + 30; // buffer for safety
     const startTime = Date.now();
@@ -97,10 +117,15 @@ async function bootstrap() {
       }
 
       try {
-        logger.log(`▶️ Processing job ${job.uuid} (name=${job.name}, attempt=${job.attempts}/${job.maxAttempts})`);
-        // TODO Phase 11: dispatch to actual job handler by JobName
-        // For Phase 1, we just log and mark complete.
-        logger.log(`✅ Job ${job.uuid} processed (stub)`);
+        logger.log(
+          `▶️ Processing job ${job.uuid} (name=${job.name}, attempt=${job.attempts}/${job.maxAttempts})`,
+        );
+        const handler = handlers[job.name as keyof typeof handlers];
+        if (!handler) {
+          throw new Error(`No handler registered for job name: ${job.name}`);
+        }
+        await handler(job.payload as never);
+        logger.log(`✅ Job ${job.uuid} processed (${job.name})`);
         await queue.complete(job.id);
         processed++;
       } catch (err) {
@@ -112,9 +137,14 @@ async function bootstrap() {
     }
 
     const totalElapsed = ((Date.now() - startedAt) / 1000).toFixed(2);
-    logger.log(`🏁 Worker done — processed=${processed}, failed=${failed}, elapsed=${totalElapsed}s`);
+    logger.log(
+      `🏁 Worker done — processed=${processed}, failed=${failed}, elapsed=${totalElapsed}s`,
+    );
   } catch (err) {
-    logger.error(`Fatal worker error: ${err instanceof Error ? err.message : String(err)}`, err instanceof Error ? err.stack : undefined);
+    logger.error(
+      `Fatal worker error: ${err instanceof Error ? err.message : String(err)}`,
+      err instanceof Error ? err.stack : undefined,
+    );
     process.exitCode = 1;
   } finally {
     await app.close();

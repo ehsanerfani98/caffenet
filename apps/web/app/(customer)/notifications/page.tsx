@@ -12,14 +12,14 @@ import {
   type NotificationType,
 } from '@/lib/stores/notification-store';
 import { cn } from '@/lib/utils';
+import { notificationsApi } from '@/lib/api/notifications';
 
 /**
- * Notifications page (7.10) — list (7.10.1), mark as read single + bulk
- * (7.10.2), NotificationItem (7.10.3), filter by type (7.10.4).
+ * Notifications page (7.10 + Phase 11.6.3).
  *
- * NOTE: the backend notifications module lands in Phase 11 (Notification +
- * Web Push). Data is hydrated into the client store then; all UI behaviour
- * below is final and Phase 11 only swaps the data source.
+ * Phase 11: the list is server-backed (GET /notifications — unread first),
+ * cached in the zustand store; mark-as-read single (11.3.2) and bulk
+ * (11.3.3) hit the API and reconcile the store optimistically.
  */
 
 type Filter = 'all' | NotificationType;
@@ -35,12 +35,33 @@ const FILTERS: { key: Filter; label: string }[] = [
 export default function NotificationsPage() {
   const { list, markRead, markAllRead } = useNotificationStore();
   const [filter, setFilter] = useState<Filter>('all');
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const filtered = useMemo(
     () => (filter === 'all' ? list : list.filter((n) => n.type === filter)),
     [list, filter],
   );
   const unreadCount = useMemo(() => list.filter((n) => !n.read).length, [list]);
+
+  /** 11.3.2 — mark one as read (optimistic store update + API call). */
+  const handleRead = (id: string) => {
+    const item = list.find((n) => n.id === id);
+    if (item && !item.read && busyId !== id) {
+      setBusyId(id);
+      markRead(id);
+      notificationsApi
+        .markRead(id)
+        .catch(() => undefined)
+        .finally(() => setBusyId(null));
+    }
+  };
+
+  /** 11.3.3 — mark all as read. */
+  const handleReadAll = () => {
+    if (unreadCount === 0) return;
+    markAllRead();
+    notificationsApi.markAllRead().catch(() => undefined);
+  };
 
   return (
     <>
@@ -67,11 +88,11 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Mark all as read (7.10.2 — bulk) */}
+      {/* Mark all as read (11.3.3) */}
       {unreadCount > 0 && (
         <button
           type="button"
-          onClick={markAllRead}
+          onClick={handleReadAll}
           className="bg-brand-50 text-brand-700 active:bg-brand-100 mx-auto mt-3 flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold"
         >
           <CheckCheck className="h-4 w-4" />
@@ -93,7 +114,7 @@ export default function NotificationsPage() {
       ) : (
         <div className="mt-3 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
           {filtered.map((n) => (
-            <NotificationItem key={n.id} notification={n} onRead={markRead} />
+            <NotificationItem key={n.id} notification={n} onRead={handleRead} />
           ))}
         </div>
       )}

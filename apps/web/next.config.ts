@@ -29,6 +29,10 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: '/push-sw.js',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' }],
+      },
+      {
         source: '/manifest.webmanifest',
         headers: [{ key: 'Content-Type', value: 'application/manifest+json' }],
       },
@@ -42,6 +46,8 @@ const withPWA = withPWAInit({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
+  // Phase 11.4 — Web Push display handlers (imported into the generated SW)
+  importScripts: ['/push-sw.js'],
   runtimeCaching: [
     {
       urlPattern: /^https?.*/,

@@ -24,6 +24,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { cn } from '@/lib/utils';
+import { NotificationBell } from '@/components/common/NotificationBell';
 
 /**
  * AdminShell (9.1) — dashboard chrome for the admin area.
@@ -189,13 +190,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            <Link
+            <NotificationBell
               href="/admin/notifications"
-              aria-label="اعلان‌ها"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
-            >
-              <Bell className="h-[18px] w-[18px]" />
-            </Link>
+              className="text-gray-500 hover:bg-gray-100"
+            />
             <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-3 pr-1">
               <div className="bg-brand-100 text-brand-700 flex h-7 w-7 items-center justify-center rounded-full text-xs font-extrabold">
                 {(user?.fullName ?? user?.phone ?? 'A').trim().charAt(0)}

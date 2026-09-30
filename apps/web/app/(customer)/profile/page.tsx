@@ -21,6 +21,9 @@ import { MobileHeader } from '@/components/common/MobileHeader';
 import { usersApi } from '@/lib/api/users';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useNotificationStore } from '@/lib/stores/notification-store';
+import { toast } from '@/components/ui/use-toast';
+import { notificationsApi } from '@/lib/api/notifications';
+import { disableWebPush, enableWebPush } from '@/lib/push/register-push';
 
 /**
  * Profile page (7.9.1) — view + links to edit/password/sessions,
@@ -147,11 +150,14 @@ function MenuLink({
 }
 
 /**
- * Notification preferences (7.9.5) — per-type toggles + Web Push master
- * switch. Persisted locally now; synced to the server profile in Phase 11.
+ * Notification preferences (7.9.5 + Phase 11.3.6) — per-type toggles +
+ * Web Push master switch. Toggles are synced to the server (PUT
+ * /notifications/preferences, grouped channel flags); the push switch runs
+ * the browser subscription flow (11.4.3/11.4.4).
  */
 function NotificationPrefsCard() {
   const { prefs, setPref } = useNotificationStore();
+  const [pushBusy, setPushBusy] = useState(false);
 
   const items: { key: keyof typeof prefs; label: string }[] = [
     { key: 'requests', label: 'تغییر وضعیت درخواست‌ها' },
@@ -161,35 +167,99 @@ function NotificationPrefsCard() {
     { key: 'pushEnabled', label: 'اعلان فوری (Web Push)' },
   ];
 
+  /** Map a store pref key to the server preference group (push is handled separately). */
+  const groupOf = (key: keyof typeof prefs) =>
+    key === 'pushEnabled'
+      ? undefined
+      : (
+          {
+            requests: 'requests',
+            wallet: 'wallet',
+            messages: 'messages',
+            marketing: 'marketing',
+          } as const
+        )[key];
+
+  const toggle = async (key: keyof typeof prefs) => {
+    const next = !prefs[key];
+
+    if (key === 'pushEnabled') {
+      if (pushBusy) return;
+      setPushBusy(true);
+      if (next) {
+        const res = await enableWebPush();
+        if (res.ok) {
+          setPref('pushEnabled', true);
+          toast({
+            title: 'اعلان فوری فعال شد',
+            description: 'از این پس پیام‌های مهم را حتی در حالت بسته بودن سایت دریافت می‌کنید.',
+          });
+        } else if (res.reason === 'denied') {
+          toast({
+            title: 'اجازه اعلان داده نشد',
+            description: 'برای فعال‌سازی، اجازه اعلان را در تنظیمات مرورگر صادر کنید.',
+          });
+        } else if (res.reason === 'unsupported') {
+          toast({ title: 'مرورگر شما از اعلان فوری پشتیبانی نمی‌کند' });
+        } else {
+          toast({
+            title: 'فعال‌سازی اعلان فوری ناموفق بود',
+            description: 'لطفاً بعداً دوباره تلاش کنید.',
+          });
+        }
+      } else {
+        await disableWebPush();
+        setPref('pushEnabled', false);
+        toast({ title: 'اعلان فوری غیرفعال شد' });
+      }
+      setPushBusy(false);
+      return;
+    }
+
+    // Group toggles — optimistic local update + server sync (11.3.6)
+    setPref(key, next);
+    const group = groupOf(key);
+    if (group) {
+      notificationsApi
+        .updatePreferences({ [group]: { inApp: next, push: next } })
+        .catch(() => undefined);
+    }
+  };
+
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
       <p className="border-b border-gray-50 px-4 py-3 text-xs font-bold text-gray-400">
         تنظیمات اعلان‌ها
       </p>
-      {items.map(({ key, label }) => (
-        <div
-          key={key}
-          className="flex items-center justify-between border-b border-gray-50 px-4 py-3.5 last:border-0"
-        >
-          <span className="text-sm text-gray-700">{label}</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={prefs[key]}
-            aria-label={label}
-            onClick={() => setPref(key, !prefs[key])}
-            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-              prefs[key] ? 'bg-brand-600' : 'bg-gray-200'
-            }`}
+      {items.map(({ key, label }) => {
+        const checked = prefs[key];
+        const disabled = key === 'pushEnabled' && pushBusy;
+        return (
+          <div
+            key={key}
+            className="flex items-center justify-between border-b border-gray-50 px-4 py-3.5 last:border-0"
           >
-            <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
-                prefs[key] ? 'right-0.5' : 'right-[22px]'
-              }`}
-            />
-          </button>
-        </div>
-      ))}
+            <span className="text-sm text-gray-700">{label}</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={checked}
+              aria-label={label}
+              disabled={disabled}
+              onClick={() => void toggle(key)}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                checked ? 'bg-brand-600' : 'bg-gray-200'
+              } ${disabled ? 'opacity-50' : ''}`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                  checked ? 'right-0.5' : 'right-[22px]'
+                }`}
+              />
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }

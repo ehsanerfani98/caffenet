@@ -48,6 +48,8 @@ interface NotificationState {
   prefs: NotificationPrefs;
 
   setAll: (list: AppNotification[]) => void;
+  /** Phase 11 — insert (or move to top) a live notification from realtime/poll */
+  upsert: (n: AppNotification) => void;
   markRead: (id: string) => void;
   markAllRead: () => void;
   clearRead: () => void;
@@ -70,6 +72,10 @@ export const useNotificationStore = create<NotificationState>()(
       prefs: defaultPrefs,
 
       setAll: (list) => set({ list }),
+      upsert: (n) =>
+        set((s) => ({
+          list: [n, ...s.list.filter((x) => x.id !== n.id)].slice(0, 100),
+        })),
       markRead: (id) =>
         set((s) => ({ list: s.list.map((n) => (n.id === id ? { ...n, read: true } : n)) })),
       markAllRead: () => set((s) => ({ list: s.list.map((n) => ({ ...n, read: true })) })),

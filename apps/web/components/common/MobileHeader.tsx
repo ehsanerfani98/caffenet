@@ -1,10 +1,11 @@
 'use client';
 
-import { ArrowRight, Bell, Wallet } from 'lucide-react';
+import { ArrowRight, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { formatToman } from '@/lib/format';
+import { NotificationBell } from '@/components/common/NotificationBell';
 
 /**
  * MobileHeader (7.2.2) — sticky top bar with back button, title,
@@ -66,15 +67,7 @@ export function MobileHeader({
               </span>
             </Link>
           )}
-          {showBell && (
-            <Link
-              href="/notifications"
-              aria-label="اعلان‌ها"
-              className="rounded-full p-2 text-gray-700 active:bg-gray-100"
-            >
-              <Bell className="h-5 w-5" />
-            </Link>
-          )}
+          {showBell && <NotificationBell variant="sheet" />}
         </div>
       </div>
     </header>

@@ -10,6 +10,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { RealtimeService } from '../../realtime/realtime.service';
 import { EventBusService } from '../../events/event-bus.service';
 import { FilesService } from '../files/files.service';
+import { NotificationService } from '../notifications/notification.service';
 import { STORAGE_TOKEN, IStorage } from '../../storage/interfaces/storage.interface';
 
 export interface ActorInfo {
@@ -65,6 +66,7 @@ export class ChatService {
     private readonly realtime: RealtimeService,
     private readonly events: EventBusService,
     private readonly files: FilesService,
+    private readonly notifications: NotificationService,
     @Inject(STORAGE_TOKEN) private readonly storage: IStorage,
   ) {}
 
@@ -476,7 +478,7 @@ export class ChatService {
       type: message.type,
     });
 
-    // 10.4.5 — notify the other party's private channel (realtime bell).
+    // 10.4.5 + Phase 11.5.5 — persisted notification for the other party.
     // Recipient = the room participant(s) other than the sender.
     const participants = await this.prisma.chatParticipant.findMany({
       where: { roomId: message.roomId, userId: { not: BigInt(actor.id) } },
@@ -486,19 +488,18 @@ export class ChatService {
       message.type === 'text'
         ? (message.body ?? '').slice(0, 80)
         : message.type === 'image'
-          ? '🖼 تصویر ارسال کرد'
-          : '📎 فایل ارسال کرد';
+          ? 'تصویر ارسال کرد'
+          : 'فایل ارسال کرد';
 
+    // NotificationService handles persistence, the private-user.{id} realtime
+    // bell, Web Push and preference gating per recipient.
     await Promise.all(
       participants.map((p) =>
-        this.realtime
-          .notifyUser(p.userId.toString(), 'NotificationCreated', {
-            type: 'message',
+        this.notifications
+          .send(p.userId.toString(), 'new_chat_message', {
             requestId: requestId.toString(),
             senderId: actor.id,
-            title: 'پیام جدید در گفتگو',
             body: preview,
-            createdAt: new Date().toISOString(),
           })
           .catch(() => undefined),
       ),

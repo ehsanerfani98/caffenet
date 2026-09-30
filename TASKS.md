@@ -6,7 +6,7 @@
 > **Repository:** [ehsanerfani98/caffenet](https://github.com/ehsanerfani98/caffenet)  
 > **Created:** 2026-09-28  
 > **Status:** Architecture Revised — Pending Final Approval  
-> **Last Updated:** 2026-09-29 (Phase 6 complete — migration + E2E verified on MySQL 8)
+> **Last Updated:** 2026-09-30 (Phase 11 complete — notifications E2E verified on MySQL 8)
 
 ---
 
@@ -770,67 +770,68 @@ Implementation notes shipped with Phase 6:
 
 ---
 
-## 🔔 Phase 11 — Notification + Web Push
+## 🔔 Phase 11 — Notification + Web Push ✅ (completed 2026-09-30)
 
 **Goal:** In-app + real-time + web push notification system.
 
 ### 11.1 Notification Data Model
 
-- [ ] 11.1.1 Create `notifications` migration (id, uuid, user_id, type, title, body, data JSONB, read_at, created_at)
-- [ ] 11.1.2 Create `notification_preferences` migration (user_id, type, in_app, push, email, sms)
-- [ ] 11.1.3 Create `push_subscriptions` migration (id, user_id, endpoint UNIQUE, p256dh, auth, device_info, created_at, last_used_at, expired_at)
+- [x] 11.1.1 Create `notifications` migration ✅ — models shipped in init migration (20260929175444); id, uuid, user_id, type, title, body, data JSON, read_at, created_at + indexes ([userId, readAt], [userId, createdAt], [type])
+- [x] 11.1.2 Create `notification_preferences` migration ✅ — per-user row with JSON prefs keyed by NotificationType (`inApp/push/email/sms` flags + `_push` master switch); grouped client view via NOTIFICATION_GROUPS
+- [x] 11.1.3 Create `push_subscriptions` migration ✅ — endpoint UNIQUE, p256dh/auth keys, userAgent/deviceType, lastUsedAt/expiredAt lifecycle columns
 
 ### 11.2 Notification Service
 
-- [ ] 11.2.1 Implement `NotificationService.send(userId, type, data)`
-- [ ] 11.2.2 Generate localized title/body based on type & user locale
-- [ ] 11.2.3 Persist in-app notification
-- [ ] 11.2.4 Emit `NotificationCreated` real-time event
-- [ ] 11.2.5 Trigger web push dispatch (if user has subscription + preference)
-- [ ] 11.2.6 Trigger email (if enabled)
-- [ ] 11.2.7 Trigger SMS (if enabled & critical)
+- [x] 11.2.1 Implement `NotificationService.send(userId, type, data)` ✅ — src/modules/notifications/notification.service.ts; resolves user + per-type channel prefs, fault-tolerant (never breaks the triggering flow); sendToUsers/sendToRole fan-out helpers
+- [x] 11.2.2 Generate localized title/body based on type & user locale ✅ — notification-templates.ts (fa templates for all 11 NotificationType values, amount/tracking formatting, caller link override, system fallback)
+- [x] 11.2.3 Persist in-app notification ✅ — created when inApp flag (or forceInApp) on; data JSON carries deep-link
+- [x] 11.2.4 Emit `NotificationCreated` real-time event ✅ — RealtimeService.notifyUser on `private-user.{id}` (channel auth already enforced by broadcasting controller)
+- [x] 11.2.5 Trigger web push dispatch (if user has subscription + preference) ✅ — one send_web_push job per active subscription, gated by per-type push flag + `_push` master switch
+- [x] 11.2.6 Trigger email (if enabled) ✅ — send_email job + MailService console driver (SMTP adapter lands later behind same interface; MAIL_* env already declared)
+- [x] 11.2.7 Trigger SMS (if enabled & critical) ✅ — send_sms job via SmsGateway for SMS_CRITICAL_TYPES (payment_failed, refund_issued)
 
 ### 11.3 Notification Endpoints
 
-- [ ] 11.3.1 `GET /api/v1/notifications` (paginated, unread first)
-- [ ] 11.3.2 `POST /api/v1/notifications/:id/read`
-- [ ] 11.3.3 `POST /api/v1/notifications/read-all`
-- [ ] 11.3.4 `GET /api/v1/notifications/unread-count`
-- [ ] 11.3.5 `DELETE /api/v1/notifications/:id`
-- [ ] 11.3.6 `GET/PUT /api/v1/notifications/preferences`
+- [x] 11.3.1 `GET /api/v1/notifications` (paginated, unread first) ✅ — page/limit/unreadOnly/type filters; MySQL NULLs-first unread ordering; meta includes unreadCount
+- [x] 11.3.2 `POST /api/v1/notifications/:id/read` ✅ — numeric id or uuid, ownership enforced, idempotent
+- [x] 11.3.3 `POST /api/v1/notifications/read-all` ✅ — updateMany, returns count
+- [x] 11.3.4 `GET /api/v1/notifications/unread-count` ✅ — badge counter
+- [x] 11.3.5 `DELETE /api/v1/notifications/:id` ✅ — ownership enforced
+- [x] 11.3.6 `GET/PUT /api/v1/notifications/preferences` ✅ — grouped view (requests/wallet/messages/marketing + pushEnabled); PUT expands group toggles to per-type flags and merges onto stored JSON
 
 ### 11.4 Web Push
 
-- [ ] 11.4.1 Generate VAPID keys
-- [ ] 11.4.2 Configure `web-push` library
-- [ ] 11.4.3 `POST /api/v1/push/subscribe` (store subscription)
-- [ ] 11.4.4 `DELETE /api/v1/push/subscribe` (unsubscribe)
-- [ ] 11.4.5 Implement push dispatch worker (queue via BullMQ)
-- [ ] 11.4.6 Implement subscription expiry detection (remove 410 Gone)
-- [ ] 11.4.7 Implement subscription rotation (per browser)
+- [x] 11.4.1 Generate VAPID keys ✅ — VAPID_PUBLIC_KEY/PRIVATE_KEY/SUBJECT env (prod-required via env.validation); invalid keys log + disable instead of crashing the API
+- [x] 11.4.2 Configure `web-push` library ✅ — PushService with TTL'd payloads, `isEnabled` + `vapidPublicKey` accessors; `GET /notifications/vapid-public-key` endpoint for browsers
+- [x] 11.4.3 `POST /api/v1/push/subscribe` (store subscription) ✅ — upsert by endpoint with keys/userAgent/deviceType; 400 on missing keys, 403 when push disabled
+- [x] 11.4.4 `DELETE /api/v1/push/subscribe` (unsubscribe) ✅ — deleteMany scoped to the caller's user id
+- [x] 11.4.5 Implement push dispatch worker (queue via BullMQ) ✅ — send_web_push job handler in src/queue/handlers (database queue driver active; BullMQ RedisQueue remains the VPS follow-up); full worker handler registry: send_notification, send_email, send_sms, cleanup jobs
+- [x] 11.4.6 Implement subscription expiry detection (remove 410 Gone) ✅ — sendToSubscription maps 404/410 → 'gone' → handler deletes subscription; cleanup_push_subscriptions job purges expiredAt ≤ now + 90-day-stale rows
+- [x] 11.4.7 Implement subscription rotation (per browser) ✅ — endpoint-UNIQUE upsert re-activates rotated subscriptions (expiredAt reset, keys refreshed)
+- [x] 11.4.8 Service-worker push display ✅ — public/push-sw.js (push + notificationclick) imported into the generated next-pwa SW via importScripts
 
 ### 11.5 Notification Types (auto-fired)
 
-- [ ] 11.5.1 RequestCreated → notify operators
-- [ ] 11.5.2 RequestAssigned → notify customer
-- [ ] 11.5.3 RequestStatusChanged → notify customer
-- [ ] 11.5.4 RequestPriceChanged → notify customer
-- [ ] 11.5.5 NewChatMessage → notify recipient
-- [ ] 11.5.6 PaymentSuccessful → notify customer + admin
-- [ ] 11.5.7 PaymentFailed → notify customer
-- [ ] 11.5.8 WalletCharged → notify customer
-- [ ] 11.5.9 RefundIssued → notify customer
-- [ ] 11.5.10 RequestCompleted → notify customer
+- [x] 11.5.1 RequestCreated → notify operators ✅ — listener fans out to role 'operator' with operator-dashboard deep-link
+- [x] 11.5.2 RequestAssigned → notify customer ✅ — customer + operator name in copy
+- [x] 11.5.3 RequestStatusChanged → notify customer ✅ — payload shapes from workflow/cancel/wallet settle normalized; actor self-notify suppressed
+- [x] 11.5.4 RequestPriceChanged → notify customer ✅ — previous/new totals in copy
+- [x] 11.5.5 NewChatMessage → notify recipient ✅ — ChatService calls NotificationService per non-sender participant (persists + realtime + push; Phase 10 raw realtime stopgap removed)
+- [x] 11.5.6 PaymentSuccessful → notify customer + admin ✅ — customer copy with tracking code; admin fan-out with gateway context
+- [x] 11.5.7 PaymentFailed → notify customer ✅ — reason surfaced
+- [x] 11.5.8 WalletCharged → notify customer ✅ — new `wallet.charged` domain event emitted on wallet credits (deposits/bonuses; payment settlements notify via payment.completed instead)
+- [x] 11.5.9 RefundIssued → notify customer ✅ — new `wallet.refunded` domain event from refundRequest + REFUND-type ledger rows
+- [x] 11.5.10 RequestCompleted → notify customer ✅ — status_changed listener maps completed → REQUEST_COMPLETED (cancelled → REQUEST_CANCELLED)
 
 ### 11.6 Notification UI
 
-- [ ] 11.6.1 Notification bell with unread badge
-- [ ] 11.6.2 Notification dropdown (mobile bottom sheet)
-- [ ] 11.6.3 Notification list page
-- [ ] 11.6.4 Push permission prompt UX
-- [ ] 11.6.5 In-app toast on new notification
+- [x] 11.6.1 Notification bell with unread badge ✅ — NotificationBell (live unreadCount via React Query + realtime bump); mounted in MobileHeader, OperatorShell, AdminShell
+- [x] 11.6.2 Notification dropdown (mobile bottom sheet) ✅ — NotificationSheet on the customer bell (latest 8, quick mark-all, link to full list) via the global BottomSheet
+- [x] 11.6.3 Notification list page ✅ — /notifications now server-backed (hydrated into the zustand store; optimistic read/read-all + API sync)
+- [x] 11.6.4 Push permission prompt UX ✅ — profile NotificationPrefsCard push toggle runs enableWebPush()/disableWebPush() (SW registration → requestPermission → subscribe → POST /push/subscribe) with Persian result toasts; group toggles sync to PUT /notifications/preferences
+- [x] 11.6.5 In-app toast on new notification ✅ — NotificationRealtimeBridge binds private-user.{id} NotificationCreated → upsert store + bump badge + Radix toast; mounted from Providers
 
-**Phase 11 Exit Criteria:** All key events trigger notifications across all 3 channels (in-app, real-time, push) per user preferences.
+**Phase 11 Exit Criteria:** All key events trigger notifications across all 3 channels (in-app, real-time, push) per user preferences. ✅ **VERIFIED** — 20 API unit tests + 18-check E2E smoke on MySQL 8 (apps/api/tests/phase11.e2e.js): notifications CRUD + preferences + push subscribe/rotate/unsubscribe + auto-fired RequestCreated→operator fan-out (persist → unread badge → mark-read → delete).
 
 ---
 

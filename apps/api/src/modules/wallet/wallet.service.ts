@@ -414,6 +414,16 @@ export class WalletService {
     );
 
     await this.emitWalletUpdated(result.customerId, result.balanceAfter);
+    // Phase 11.5.9 — refund notification event (refunds bypass mutate())
+    await this.events
+      .emit(DOMAIN_EVENTS.WALLET_REFUNDED, {
+        userId: result.customerId,
+        amount: CurrencyHelper.toMajor(Number(result.refundedMinor)),
+        balance: CurrencyHelper.toMajor(Number(result.balanceAfter)),
+        trackingCode: result.trackingCode,
+        at: new Date().toISOString(),
+      })
+      .catch(() => undefined);
     return {
       requestId: requestId,
       trackingCode: result.trackingCode,
@@ -568,6 +578,34 @@ export class WalletService {
     );
 
     await this.emitWalletUpdated(userId, ledger.balanceAfter);
+
+    // Phase 11.5.8/11.5.9 — typed credit events for the notification pipeline.
+    // Payment settlements (settlePayment) notify via payment.completed instead.
+    // REFUND rows carry a positive amount — check the type FIRST.
+    if (ledger.type === WalletTransactionType.REFUND) {
+      await this.events
+        .emit(DOMAIN_EVENTS.WALLET_REFUNDED, {
+          userId,
+          amount: CurrencyHelper.toMajor(Number(ledger.amount)),
+          balance: CurrencyHelper.toMajor(Number(ledger.balanceAfter)),
+          referenceType: ledger.referenceType,
+          referenceId: ledger.referenceId ? ledger.referenceId.toString() : null,
+          at: new Date().toISOString(),
+        })
+        .catch(() => undefined);
+    } else if (ledger.amount > 0n) {
+      // any other credit (deposit / bonus / discount / positive adjustment)
+      await this.events
+        .emit(DOMAIN_EVENTS.WALLET_CHARGED, {
+          userId,
+          amount: CurrencyHelper.toMajor(Number(ledger.amount)),
+          balance: CurrencyHelper.toMajor(Number(ledger.balanceAfter)),
+          transactionType: ledger.type,
+          at: new Date().toISOString(),
+        })
+        .catch(() => undefined);
+    }
+
     return ledger;
   }
 

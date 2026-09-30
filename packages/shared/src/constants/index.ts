@@ -152,7 +152,26 @@ export const DOMAIN_EVENTS = {
   PAYMENT_COMPLETED: 'payment.completed',
   PAYMENT_FAILED: 'payment.failed',
   WALLET_UPDATED: 'wallet.updated',
+  WALLET_CHARGED: 'wallet.charged', // Phase 11.5.8 — credit landed in the wallet (deposit/bonus)
+  WALLET_REFUNDED: 'wallet.refunded', // Phase 11.5.9 — refund credited to the wallet
 } as const;
+
+// Phase 11 — notification preference groups (client-facing aggregation of
+// per-type NotificationChannel flags; see NotificationService)
+export const NOTIFICATION_GROUPS = {
+  requests: [
+    'request_assigned',
+    'request_status_changed',
+    'request_price_changed',
+    'request_completed',
+    'request_cancelled',
+  ],
+  wallet: ['payment_successful', 'payment_failed', 'wallet_charged', 'refund_issued'],
+  messages: ['new_chat_message'],
+  marketing: ['system'],
+} as const;
+
+export type NotificationGroupName = keyof typeof NOTIFICATION_GROUPS;
 
 // ==================== PHASE 5 — PRICING / DISCOUNTS / INVOICES ====================
 

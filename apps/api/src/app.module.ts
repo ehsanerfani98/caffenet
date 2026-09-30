@@ -33,6 +33,8 @@ import { DiscountsModule } from './modules/discounts/discounts.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
@@ -118,6 +120,8 @@ import { ChatModule } from './modules/chat/chat.module';
     // Additional modules (Phase 6+) added here
     AdminModule, // Phase 8/9 — operator & admin dashboards' backend
     ChatModule, // Phase 10 — real-time chat + Pusher broadcasting
+    MailModule, // Phase 11.2.6 — email transport (console driver)
+    NotificationsModule, // Phase 11 — in-app + realtime + web push notifications
   ],
   controllers: [AppController],
   providers: [
