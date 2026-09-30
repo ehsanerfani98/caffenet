@@ -32,6 +32,7 @@ import { PricingModule } from './modules/pricing/pricing.module';
 import { DiscountsModule } from './modules/discounts/discounts.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -116,6 +117,7 @@ import { AdminModule } from './modules/admin/admin.module';
     PaymentsModule,
     // Additional modules (Phase 6+) added here
     AdminModule, // Phase 8/9 — operator & admin dashboards' backend
+    ChatModule, // Phase 10 — real-time chat + Pusher broadcasting
   ],
   controllers: [AppController],
   providers: [

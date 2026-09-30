@@ -208,7 +208,7 @@ export default function RequestDetailPage() {
         {/* 7.7.5 + 7.7.6 — chat & invoice entries */}
         <div className="grid grid-cols-2 gap-3">
           <Link
-            href="/chat"
+            href={`/chat/${id}`}
             className="flex items-center justify-center gap-2 rounded-2xl border border-gray-100 bg-white p-4 text-sm font-bold text-gray-700 shadow-sm active:bg-gray-50"
           >
             <MessageCircle className="h-4.5 w-4.5 text-brand-600" />

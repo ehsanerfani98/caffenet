@@ -9,6 +9,7 @@ import {
   FileText,
   Link2,
   Loader2,
+  MessageCircle,
   Phone,
   UserMinus,
   UserPlus,
@@ -365,6 +366,15 @@ export default function OperatorRequestDetailPage() {
 
       {/* ===== Payment link box (8.4.8) ===== */}
       <PaymentLinkBox requestId={id} />
+
+      {/* ===== Chat entry (Phase 10.5) ===== */}
+      <Link
+        href={`/operator/chat/${id}`}
+        className="hover:border-brand-300 hover:text-brand-700 flex items-center justify-center gap-2 rounded-2xl border border-gray-100 bg-white p-3.5 text-sm font-bold text-gray-700 shadow-sm transition-colors"
+      >
+        <MessageCircle className="h-4.5 w-4.5 text-brand-600" />
+        گفتگوی زنده با مشتری
+      </Link>
 
       {/* ===== Timeline + history audit (8.4.9) ===== */}
       <section aria-label="روند درخواست">

@@ -709,62 +709,62 @@ Implementation notes shipped with Phase 6:
 
 ---
 
-## 💬 Phase 10 — Real-Time Chat + Pusher
+## 💬 Phase 10 — Real-Time Chat + Pusher ✅ (completed 2026-09-30)
 
 **Goal:** Real-time chat between customer and operator per request room.
 
 ### 10.1 Pusher.com Integration (Cloud — no WebSocket server needed)
 
-- [ ] 10.1.1 Configure Pusher.com account (app_id, key, secret, cluster)
-- [ ] 10.1.2 Setup Pusher server SDK in `apps/api` (pusher-nodejs)
-- [ ] 10.1.3 Configure auth endpoint `POST /api/v1/broadcasting/auth` (signed JWT verification)
-- [ ] 10.1.4 Define private channel naming: `private-request.{requestId}`
-- [ ] 10.1.5 Define presence channels: `presence-request.{requestId}`
-- [ ] 10.1.6 Define user-level private channels: `private-user.{userId}`
-- [ ] 10.1.7 Configure Pusher webhook endpoint `POST /api/v1/broadcasting/webhook` (for channel_existence events)
-- [ ] 10.1.8 Setup `apps/web` pusher-js client with auth transport pointing to backend
-- [ ] 10.1.9 Document Pusher plan limits (channels, messages, connections) and capacity planning
-- [ ] 10.1.10 Configure Pusher TLS verification (reject unauthorized)
-- [ ] 10.1.11 **Note:** No Soketi server, no Redis adapter needed for shared hosting — Pusher handles scaling
+- [x] 10.1.1 Configure Pusher.com account (app_id, key, secret, cluster) ✅ credentials via env (PUSHER_APP_ID/KEY/SECRET/CLUSTER) — documented in .env.example
+- [x] 10.1.2 Setup Pusher server SDK in `apps/api` (pusher-nodejs) ✅ — `pusher` SDK in apps/api; PusherService (realtime/pusher.service.ts) with useTLS + no-op fallback
+- [x] 10.1.3 Configure auth endpoint `POST /api/v1/broadcasting/auth` (signed JWT verification) ✅ — BroadcastingController POST /broadcasting/auth behind JwtAuthGuard + channel-level authorization
+- [x] 10.1.4 Define private channel naming: `private-request.{requestId}` ✅ — `private-request.{id}` (shared PUSHER_CONFIG)
+- [x] 10.1.5 Define presence channels: `presence-request.{requestId}` ✅ — `presence-request.{id}` with user_info {name, roles}
+- [x] 10.1.6 Define user-level private channels: `private-user.{userId}` ✅ — `private-user.{userId}` (self-only auth) — used for NotificationCreated/Wallet/Payment events
+- [x] 10.1.7 Configure Pusher webhook endpoint `POST /api/v1/broadcasting/webhook` (for channel_existence events) ✅ — POST /broadcasting/webhook with HMAC-SHA256 signature verification (timing-safe) + channel_existence logging
+- [x] 10.1.8 Setup `apps/web` pusher-js client with auth transport pointing to backend ✅ — pusher-js with custom authorizer that sends the CURRENT bearer token on every (re)auth
+- [x] 10.1.9 Document Pusher plan limits (channels, messages, connections) and capacity planning ✅ — capacity planning table added to docs/adr/0003 (Sandbox 100 conn/200K msg → Starter/Pro sizing rules)
+- [x] 10.1.10 Configure Pusher TLS verification (reject unauthorized) ✅ — server useTLS: true; client forceTLS + only ws/wss transports
+- [x] 10.1.11 **Note:** No Soketi server, no Redis adapter needed for shared hosting — Pusher handles scaling ✅ — Pusher cloud handles scaling; RealtimeService abstraction allows Soketi swap on VPS
 
 ### 10.2 Chat Data Model
 
-- [ ] 10.2.1 Create `chat_rooms` migration (id, uuid, request_id UNIQUE, type, created_at)
-- [ ] 10.2.2 Create `chat_participants` migration (room_id, user_id, joined_at, last_read_at)
-- [ ] 10.2.3 Create `messages` migration (id, uuid, room_id, sender_id, type [text/image/file/system], body, metadata, created_at, deleted_at)
-- [ ] 10.2.4 Create `message_attachments` migration (message_id, file_id, file_name, mime, size)
-- [ ] 10.2.5 Create `message_reads` migration (message_id, user_id, read_at) — or use counter approach
+- [x] 10.2.1 Create `chat_rooms` migration (id, uuid, request_id UNIQUE, type, created_at) ✅ — chat_rooms in schema + init migration (request_id UNIQUE)
+- [x] 10.2.2 Create `chat_participants` migration (room_id, user_id, joined_at, last_read_at) ✅ — chat_participants (roomId+userId UNIQUE, role, last_read_at)
+- [x] 10.2.3 Create `messages` migration (id, uuid, room_id, sender_id, type [text/image/file/system], body, metadata, created_at, deleted_at) ✅ — messages (type text/image/file/system, body, metadata, read_at, deleted_at, deleted_by)
+- [x] 10.2.4 Create `message_attachments` migration (message_id, file_id, file_name, mime, size) ✅ — message_attachments (file_id → file_uploads, name/mime/size) with signed URLs on read
+- [x] 10.2.5 Create `message_reads` migration (message_id, user_id, read_at) — or use counter approach ✅ — via Message.read_at + ChatParticipant.last_read_at (documented alternative to message_reads table)
 
 ### 10.3 Chat Endpoints
 
-- [ ] 10.3.1 `GET /api/v1/requests/:id/messages` (paginated, cursor-based)
-- [ ] 10.3.2 `POST /api/v1/requests/:id/messages` (text)
-- [ ] 10.3.3 `POST /api/v1/requests/:id/messages/file` (image/file)
-- [ ] 10.3.4 `POST /api/v1/requests/:id/messages/:id/read`
-- [ ] 10.3.5 `DELETE /api/v1/requests/:id/messages/:id` (soft delete by sender)
-- [ ] 10.3.6 Authorization: only customer of request + assigned operator + admin
+- [x] 10.3.1 `GET /api/v1/requests/:id/messages` (paginated, cursor-based) ✅ — GET /api/v1/requests/:id/messages — cursor-based (base64 id cursor), 30/page, ascending output
+- [x] 10.3.2 `POST /api/v1/requests/:id/messages` (text) ✅ — POST /api/v1/requests/:id/messages — rate-limited 30/min
+- [x] 10.3.3 `POST /api/v1/requests/:id/messages/file` (image/file) ✅ — POST /api/v1/requests/:id/messages/file — multipart via FilesService (private storage + signed URL 1h)
+- [x] 10.3.4 `POST /api/v1/requests/:id/messages/:id/read` ✅ — POST /api/v1/requests/:id/messages/:messageId/read (supports `all` sentinel → marks every unread)
+- [x] 10.3.5 `DELETE /api/v1/requests/:id/messages/:id` (soft delete by sender) ✅ — DELETE /api/v1/requests/:id/messages/:messageId — soft delete (deleted_at/deleted_by), sender or admin
+- [x] 10.3.6 Authorization: only customer of request + assigned operator + admin ✅ — enforced in ChatService.assertRoomAccess + resolveRoom (customer owner / assigned operator / admin)
 
 ### 10.4 Real-Time Events
 
-- [ ] 10.4.1 Emit `MessageSent` on private-request.{id}
-- [ ] 10.4.2 Emit `MessageRead` on private-request.{id}
-- [ ] 10.4.3 Emit `RequestStatusChanged` on private-request.{id}
-- [ ] 10.4.4 Emit `RequestPriceChanged` on private-request.{id}
-- [ ] 10.4.5 Emit `NotificationCreated` on private-user.{id}
-- [ ] 10.4.6 Emit `WalletUpdated` on private-user.{id}
-- [ ] 10.4.7 Emit `PaymentCompleted` on private-user.{id}
+- [x] 10.4.1 Emit `MessageSent` on private-request.{id} ✅ — ChatService.afterMessagePersisted → RealtimeService.broadcastMessage
+- [x] 10.4.2 Emit `MessageRead` on private-request.{id} ✅ — emitted with readerId + lastMessageId + count for receipt updates
+- [x] 10.4.3 Emit `RequestStatusChanged` on private-request.{id} ✅ — request-workflow.service + requests.service emit on status transitions
+- [x] 10.4.4 Emit `RequestPriceChanged` on private-request.{id} ✅ — pricing/request-costs.service emits on cost updates (room + customer private channels)
+- [x] 10.4.5 Emit `NotificationCreated` on private-user.{id} ✅ — emitted on private-user.{id} for new chat messages (full NotificationService lands Phase 11)
+- [x] 10.4.6 Emit `WalletUpdated` on private-user.{id} ✅ — wallet.service emits on balance changes
+- [x] 10.4.7 Emit `PaymentCompleted` on private-user.{id} ✅ — payments.service emits PaymentCompleted/PaymentFailed
 
 ### 10.5 Chat UI (Customer + Operator)
 
-- [ ] 10.5.1 `ChatMessage` component (text/image/file/system)
-- [ ] 10.5.2 `ChatInput` component (text + attach)
-- [ ] 10.5.3 Message list (infinite scroll up)
-- [ ] 10.5.4 Unread counter badge
-- [ ] 10.5.5 Typing indicator (optional, via presence)
-- [ ] 10.5.6 Read receipts (✓✓)
-- [ ] 10.5.7 Optimistic send + rollback on error
-- [ ] 10.5.8 Connection state indicator
-- [ ] 10.5.9 Auto-reconnect on drop
+- [x] 10.5.1 `ChatMessage` component (text/image/file/system) ✅ — components/chat/ChatMessageItem.tsx (text/image/file/system + deleted tombstone, RTL)
+- [x] 10.5.2 `ChatInput` component (text + attach) ✅ — components/chat/ChatInput.tsx (auto-grow textarea + attach ≤10MB + caption, Enter to send)
+- [x] 10.5.3 Message list (infinite scroll up) ✅ — useInfiniteQuery + fetchPreviousPage with scroll-position restore
+- [x] 10.5.4 Unread counter badge ✅ — ChatRoomList badges per room + chat/unread-count endpoint; operator dashboard KPI now live
+- [x] 10.5.5 Typing indicator (optional, via presence) ✅ — client-typing events on presence channel, 1.5s throttle, 2.5s expiry
+- [x] 10.5.6 Read receipts (✓✓) ✅ — ✓ sent / ✓✓ read via MessageRead event (numeric-safe id comparison)
+- [x] 10.5.7 Optimistic send + rollback on error ✅ — useChat textMutation onMutate optimistic append + rollback onError
+- [x] 10.5.8 Connection state indicator ✅ — bindConnectionState watcher → status strip (connected / reconnecting)
+- [x] 10.5.9 Auto-reconnect on drop ✅ — pusher-js auto-reconnect + refetch history & rooms on `connected` state
 
 **Phase 10 Exit Criteria:** Customer and operator can chat in real-time, attachments work, read receipts accurate, presence shows who's online.
 
